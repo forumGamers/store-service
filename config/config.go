@@ -11,11 +11,6 @@ import (
 )
 
 var Db *gorm.DB
-// var Store m.Store
-// var Item m.Item
-// var Transaction m.Transaction
-// var StoreRating m.StoreRating
-// var ItemRating m.ItemRating
 
 func Connection(){
 	database,err := gorm.Open("postgres","user=postgres password=qwertyui host=127.0.0.1 port=5432 dbname=store-service sslmode=disable")
