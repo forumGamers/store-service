@@ -18,7 +18,9 @@ func getDb() *gorm.DB {
 func CreateStore(c *gin.Context){
 	var store m.Store
 
-	name,image,description,owner_id := c.PostForm("name"),c.PostForm("image"),c.PostForm("description"),c.PostForm("owner_id")
+	name,image,description := c.PostForm("name"),c.PostForm("image"),c.PostForm("description")
+
+	owner_id := c.Request.Header.Get("id")
 
 	if name == ""  || owner_id == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest,gin.H{"message" : "invalid data"})

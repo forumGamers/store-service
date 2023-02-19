@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/logger"
 	"github.com/gin-gonic/gin"
@@ -16,6 +18,11 @@ func Routes(){
 	r.router.Use(cors.Default())
 	
 	r.router.Use(logger.SetLogger())
+
+	//testing connection
+	r.router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK,gin.H{"message":"pong"})
+	})
 
 	groupRoutes := r.router.Group("/api")
 
