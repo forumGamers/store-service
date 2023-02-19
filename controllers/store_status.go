@@ -16,13 +16,11 @@ func CreateStoreStatus(c *gin.Context){
 	maker_id := c.Request.Header.Get("id")
 
 	if name == "" || minimum_exp == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest,gin.H{"message" : "Invalid data"})
-		return
+		panic("Invalid data")
 	}
 
 	if maker_id == "" {
-		c.AbortWithStatusJSON(http.StatusForbidden,gin.H{"message" : "Forbidden"})
-		return
+		panic("Forbidden")
 	}
 
 	store_status.Name = name
@@ -54,4 +52,8 @@ func CreateStoreStatus(c *gin.Context){
 		c.JSON(http.StatusInternalServerError,gin.H{"message" : "Internal Server Error"})
 		return
 	}
+}
+
+func getAllStoreStatus(c *gin.Context){
+	
 }
