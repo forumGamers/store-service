@@ -10,4 +10,6 @@ func (r routes) store_status_routes(rg *gin.RouterGroup ){
 	uri := rg.Group("/store_status")
 
 	uri.POST("/",c.CreateStoreStatus)
+
+	uri.GET("/",c.GetAllStoreStatus)
 }

@@ -54,6 +54,38 @@ func CreateStoreStatus(c *gin.Context){
 	}
 }
 
-func getAllStoreStatus(c *gin.Context){
-	
+func GetAllStoreStatus(c *gin.Context){
+	var store_status []m.StoreStatus
+
+	tx := getDb().Model(&m.StoreStatus{})
+
+	name,page := c.Query("name"),c.Query("page")
+
+	if name != "" {
+		tx.Where("name ILIKE ?",name)
+	}
+
+	limit := 10
+
+	if page != "" {
+		p ,err:= strconv.ParseInt(page,10,64)
+
+		if err != nil {
+			panic("Invalid data")
+		}
+
+		offset := (int(p) - 1) * limit
+
+		tx.Offset(offset)
+	}
+
+	tx.Limit(limit)
+
+	go func (){
+		tx.Find(&store_status)
+	}()
+
+	c.JSON(http.StatusOK,gin.H{"data":store_status})
+	return
+
 }

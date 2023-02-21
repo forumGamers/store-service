@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,16 +11,26 @@ func ErrorHandler(c *gin.Context) {
 	defer func(){
 		msg :=  recover()
 		s := http.StatusInternalServerError
-		if msg == "Data not found"{
+		if msg == nil {
+			return
+		}
+		switch msg {
+		case "Data not found" :
 			s = http.StatusNotFound
-		}else if msg == "Invalid data" {
-			s = http.StatusBadRequest
-		}else if msg == "Forbidden" {
+			break
+		case "Forbidden":
 			s = http.StatusForbidden
-		}else {
+			break
+		case "Invalid data":
+			s = http.StatusBadRequest
+			break
+		default :
+			fmt.Println(msg)
 			msg = "Internal Server Error"
+			break
 		}
 		c.AbortWithStatusJSON(s,gin.H{"message":msg})
+		return
 	}()
 	c.Next()
 }

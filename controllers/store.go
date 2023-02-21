@@ -22,9 +22,12 @@ func CreateStore(c *gin.Context){
 
 	owner_id := c.Request.Header.Get("id")
 
-	if name == ""  || owner_id == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest,gin.H{"message" : "invalid data"})
-		return
+	if name == ""  {
+		panic("Invalid data")
+	}
+
+	if owner_id == "" {
+		panic("Forbidden")
 	}
 
 	store.Name = name
@@ -53,7 +56,6 @@ func CreateStore(c *gin.Context){
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {
-		c.JSON(http.StatusInternalServerError,gin.H{"message" : "Internal Server Error"})
-		return
+		panic("Internal Server Error")
 	}
 }
