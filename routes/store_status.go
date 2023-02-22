@@ -15,4 +15,6 @@ func (r routes) store_status_routes(rg *gin.RouterGroup ){
 	uri.GET("/",c.GetAllStoreStatus)
 
 	uri.PATCH("/change-name/:id",md.AuthorizeAdmin,c.UpdateStoreStatusName)
+
+	uri.PATCH("/change-exp/:id",md.AuthorizeAdmin,c.UpdateStoreStatusExp)
 }

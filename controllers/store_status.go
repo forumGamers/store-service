@@ -135,3 +135,33 @@ func UpdateStoreStatusName(c *gin.Context){
 
 	c.JSON(http.StatusCreated,gin.H{"message": "success"})
 }
+
+func UpdateStoreStatusExp(c *gin.Context){
+	var store_status m.StoreStatus
+
+	exp := c.PostForm("exp")
+
+	id := c.Param("id")
+
+	if exp == "" {
+		panic("Invalid data")
+	}
+
+	if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
+		panic("Data not found")
+	}
+
+	e,er := strconv.ParseInt(exp,10,64)
+
+	if er != nil {
+		panic(er.Error())
+	}
+
+	store_status.Minimum_exp = int(e)
+
+	if err := getDb().Save(&store_status).Error ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
