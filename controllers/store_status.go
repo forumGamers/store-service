@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 
 	m "github.com/forumGamers/store-service/models"
@@ -55,37 +56,58 @@ func CreateStoreStatus(c *gin.Context){
 }
 
 func GetAllStoreStatus(c *gin.Context){
-	var store_status []m.StoreStatus
-
-	tx := getDb().Model(&m.StoreStatus{})
-
 	name,page := c.Query("name"),c.Query("page")
 
-	if name != "" {
-		tx.Where("name ILIKE ?",name)
-	}
+	ch := make(chan []m.StoreStatus)
+	errCh := make(chan string)
 
-	limit := 10
+	go func(){
+		var store_status []m.StoreStatus
 
-	if page != "" {
-		p ,err:= strconv.ParseInt(page,10,64)
+		tx := getDb().Model(&m.StoreStatus{})
 
-		if err != nil {
-			panic("Invalid data")
+		if name != "" {
+			r := regexp.MustCompile(`\W`)
+			result := r.ReplaceAllString(name," ")
+			tx.Where("name ILIKE ?",result)
+		}
+	
+		limit := 10
+	
+		if page != "" {
+			p ,err:= strconv.ParseInt(page,10,64)
+	
+			if err != nil {
+				panic("Invalid data")
+			}
+	
+			offset := (int(p) - 1) * limit
+	
+			tx.Offset(offset)
+		}
+	
+		tx.Limit(limit)
+	
+		
+		tx.Find(&store_status)
+
+		if len(store_status) < 1 {
+			errCh <- "Data not found"
+			return
 		}
 
-		offset := (int(p) - 1) * limit
-
-		tx.Offset(offset)
-	}
-
-	tx.Limit(limit)
-
-	go func (){
-		tx.Find(&store_status)
+		ch <- store_status
 	}()
 
-	c.JSON(http.StatusOK,gin.H{"data":store_status})
-	return
-
+	select {
+	case storeStatus := <- ch :
+		c.JSON(http.StatusOK,gin.H{"data":storeStatus})
+		return
+	case err := <- errCh : 
+		if err == "Data not found" {
+			panic(err)
+		}else {
+			panic("Internal Server Error")
+		}
+	}
 }

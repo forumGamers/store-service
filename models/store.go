@@ -9,7 +9,7 @@ type Store struct {
 	Description 		string 			`gorm:";type:text" json:"description"`
 	Owner_id			int				`json:"Owner_id" gorm:";NOT NULL"`
 	Exp_id				uint			`json:"exp_id" gorm:";not null"`
-	Store_Status_id		uint			`json:"store_status_id" gorm:";not null"`
+	Slug				string			`json:"slug"`
 	Items 				[]Item			`gorm:";constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:store_id"`
 	Ratings				[]StoreRating	`gorm:";constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:store_id"`
 	Transactions 		[]Transaction	`gorm:";foreignKey:store_id"`
