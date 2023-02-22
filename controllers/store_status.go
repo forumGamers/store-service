@@ -111,3 +111,27 @@ func GetAllStoreStatus(c *gin.Context){
 		}
 	}
 }
+
+func UpdateStoreStatusName(c *gin.Context){
+	var store_status m.StoreStatus
+
+	name := c.PostForm("name")
+
+	id := c.Param("id")
+
+	if name == "" {
+		panic("Invalid data")
+	}
+
+	if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
+		panic("Data not found")
+	}
+
+	store_status.Name = name
+
+	if err := getDb().Save(&store_status).Error ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message": "success"})
+}
