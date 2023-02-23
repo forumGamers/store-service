@@ -69,6 +69,8 @@ func UpdateStoreName(c *gin.Context){
 
 	name := c.PostForm("name")
 
+	errCh := make(chan error)
+
 	if id == "" {
 		panic("Forbidden")
 	}
@@ -83,17 +85,25 @@ func UpdateStoreName(c *gin.Context){
 		panic(er.Error())
 	}
 
-	if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
-		panic("Data not found")
-	}
+	go func ()  {
+		if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
+			errCh <- errors.New("Data not found")
+		}
+	
+		if int(Id) != store.Owner_id {
+			errCh <- errors.New("Forbidden")
+		}
+	
+		store.Name = name
+	
+		if err := getDb().Save(&store).Error; err != nil {
+			panic(err.Error())
+		}
+		
+		errCh <- nil
+	}()
 
-	if int(Id) != store.Owner_id {
-		panic("Forbidden")
-	}
-
-	store.Name = name
-
-	if err := getDb().Save(&store).Error; err != nil {
+	if err := <- errCh ; err != nil {
 		panic(err.Error())
 	}
 
