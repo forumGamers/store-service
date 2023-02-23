@@ -94,5 +94,5 @@ func UpdateStoreName(c *gin.Context){
 		panic(err.Error())
 	}
 
-	c.JSON(http.StatusContinue,gin.H{"message":"success"})
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }

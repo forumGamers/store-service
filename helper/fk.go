@@ -15,6 +15,4 @@ func SetFK(g *gorm.DB){
 	g.Model(&m.StoreRating{}).AddForeignKey("store_id","stores(id)","CASCADE","CASCADE")
 
 	g.Model(&m.ItemRating{}).AddForeignKey("item_id","items(id)","CASCADE","CASCADE")
-
-	g.Model(&m.Store{}).AddForeignKey("exp_id","experiences(id)","CASCADE","CASCADE")
 }

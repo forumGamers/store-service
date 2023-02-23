@@ -8,6 +8,7 @@ type Item struct {
 	Image			string			`json:"image"`
 	Store_id 		uint 			`gorm:";NOT NULL"`
 	Status			string			`json:"status"`		
+	Slug			string			`json:"slug"`
 	Ratings 		[]ItemRating	`gorm:";foreignKey:item_id;references:id"`
 	Store			Store			`gorm:";foreignKey:store_id;references:id"`	
 }
