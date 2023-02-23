@@ -97,7 +97,7 @@ func UpdateStoreName(c *gin.Context){
 		store.Name = name
 	
 		if err := getDb().Save(&store).Error; err != nil {
-			panic(err.Error())
+			errCh <- err
 		}
 		
 		errCh <- nil

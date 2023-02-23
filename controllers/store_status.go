@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -122,13 +123,23 @@ func UpdateStoreStatusName(c *gin.Context){
 		panic("Invalid data")
 	}
 
-	if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
-		panic("Data not found")
-	}
+	errCh := make(chan error)
 
-	store_status.Name = name
+	go func ()  {
+		if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
+			errCh <- errors.New("Data not found")
+			return
+		}
+	
+		store_status.Name = name
+	
+		if err := getDb().Save(&store_status).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+	}()
 
-	if err := getDb().Save(&store_status).Error ; err != nil {
+	if err := <- errCh ;err != nil {
 		panic(err.Error())
 	}
 
@@ -146,9 +157,7 @@ func UpdateStoreStatusExp(c *gin.Context){
 		panic("Invalid data")
 	}
 
-	if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
-		panic("Data not found")
-	}
+	errCh := make(chan error)
 
 	e,er := strconv.ParseInt(exp,10,64)
 
@@ -156,9 +165,22 @@ func UpdateStoreStatusExp(c *gin.Context){
 		panic(er.Error())
 	}
 
-	store_status.Minimum_exp = int(e)
+	go func ()  {
+		if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
+			errCh <- errors.New("Data not found")
+			return
+		}
 
-	if err := getDb().Save(&store_status).Error ; err != nil {
+		store_status.Minimum_exp = int(e)
+
+		if err := getDb().Save(&store_status).Error ; err != nil {
+			errCh <- err
+		}
+
+		errCh <- nil
+	}()
+
+	if err := <- errCh ; err != nil {
 		panic(err.Error())
 	}
 
