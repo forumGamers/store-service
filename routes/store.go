@@ -10,4 +10,6 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 	uri := rg.Group("/store")
 
 	uri.POST("/",c.CreateStore)
+
+	uri.PATCH("/change-name/:id",c.UpdateStoreName)
 }

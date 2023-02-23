@@ -40,22 +40,59 @@ func CreateStore(c *gin.Context){
 
 	store.Owner_id = int(id)
 
-	err := make(chan bool)
+	err := make(chan error)
 
 	go func () {
 		res := getDb().Create(&store)
 
 		if res.Error != nil {
-			err <- true
+			err <- res.Error
 		}else {
-			err <- false
+			err <- nil
 		}
 	}()
 
-	if <- err == false {
+	if <- err == nil {
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {
-		panic("Internal Server Error")
+		panic(<- err)
 	}
+}
+
+func UpdateStoreName(c *gin.Context){
+	var store m.Store
+	id := c.Request.Header.Get("id")
+
+	name := c.PostForm("name")
+
+	if id == "" {
+		panic("Forbidden")
+	}
+
+	if name == "" {
+		panic("Invalid data")
+	}
+
+	Id,er := strconv.ParseInt(id,10,64)
+
+	if er != nil {
+		panic(er.Error())
+	}
+
+	if err := getDb().Where("id = ?",Id).First(&store).Error ; err != nil {
+		panic("Data not found")
+	}
+
+	if int(Id) != store.Owner_id {
+		panic("Forbidden")
+	}
+
+	store.Name = name
+
+	if err := getDb().Save(&store).Error; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusContinue,gin.H{"message":"success"})
 }

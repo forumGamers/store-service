@@ -34,24 +34,23 @@ func CreateStoreStatus(c *gin.Context){
 
 	store_status.Maker_id = int(id)
 
-	err := make(chan bool)
+	err := make(chan error)
 
 	go func (){
 		res := getDb().Create(&store_status)
 
 		if res.Error != nil {
-			err <- true
+			err <- res.Error
 		}else {
-			err <- false
+			err <- nil
 		}
 	}()
 
-	if <- err == false {
+	if <- err == nil {
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {
-		c.JSON(http.StatusInternalServerError,gin.H{"message" : "Internal Server Error"})
-		return
+		panic(<- err)
 	}
 }
 
