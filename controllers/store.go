@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -64,6 +65,8 @@ func UpdateStoreName(c *gin.Context){
 	var store m.Store
 	id := c.Request.Header.Get("id")
 
+	storeId := c.Param("id")
+
 	name := c.PostForm("name")
 
 	if id == "" {
@@ -80,7 +83,7 @@ func UpdateStoreName(c *gin.Context){
 		panic(er.Error())
 	}
 
-	if err := getDb().Where("id = ?",Id).First(&store).Error ; err != nil {
+	if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
 		panic("Data not found")
 	}
 
@@ -94,5 +97,54 @@ func UpdateStoreName(c *gin.Context){
 		panic(err.Error())
 	}
 
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func UpdateStoreDesc(c *gin.Context){
+	var store m.Store
+
+	desc := c.PostForm("description")
+
+	id := c.Request.Header.Get("id")
+
+	storeId := c.Param("id")
+
+	if id == "" {
+		panic("Forbidden")
+	}
+
+	Id,er := strconv.ParseInt(id,10,64)
+
+	if er != nil {
+		panic(er.Error())
+	}
+
+	errCh := make(chan error)
+
+	go func ()  {
+		if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
+			errCh <- errors.New("Data not found")
+			return
+		}
+
+		if Id != int64(store.Owner_id) {
+			errCh <- errors.New("Forbidden")
+			return
+		}
+
+		store.Description = desc
+
+		if err := getDb().Save(&store).Error ; err != nil {
+			errCh <- err
+			return
+		}
+
+		errCh <- nil
+	}()
+
+	if err := <- errCh; err != nil {
+		panic(err.Error())
+	}
+	
 	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
