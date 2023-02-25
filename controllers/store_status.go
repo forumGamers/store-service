@@ -62,7 +62,7 @@ func GetAllStoreStatus(c *gin.Context){
 	c.Query("page")
 
 	ch := make(chan []m.StoreStatus)
-	errCh := make(chan string)
+	errCh := make(chan error)
 
 	go func(name string,page string){
 		var store_status []m.StoreStatus
@@ -86,7 +86,7 @@ func GetAllStoreStatus(c *gin.Context){
 			p ,err:= strconv.ParseInt(page,10,64)
 	
 			if err != nil {
-				panic("Invalid data")
+				errCh <- errors.New("Invalid data")
 			}
 	
 			offset := (int(p) - 1) * limit
@@ -100,7 +100,7 @@ func GetAllStoreStatus(c *gin.Context){
 		tx.Where(query,args...).Find(&store_status)
 
 		if len(store_status) < 1 {
-			errCh <- "Data not found"
+			errCh <- errors.New("Data not found") 
 			return
 		}
 
@@ -112,11 +112,7 @@ func GetAllStoreStatus(c *gin.Context){
 		c.JSON(http.StatusOK,gin.H{"data":storeStatus})
 		return
 	case err := <- errCh : 
-		if err == "Data not found" {
-			panic(err)
-		}else {
-			panic("Internal Server Error")
-		}
+		panic(err.Error())
 	}
 }
 

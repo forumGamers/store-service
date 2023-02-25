@@ -163,21 +163,33 @@ func UpdateStoreDesc(c *gin.Context){
 }
 
 func GetAllStores(c *gin.Context){
-	name,minDate,maxDate,owner,active,minExp,maxExp := 
+	name,minDate,maxDate,owner,active,minExp,maxExp,page,limit := 
 	c.Query("name"),
 	c.Query("minDate"),
 	c.Query("maxDate"),
 	c.Query("owner"),
 	c.Query("active"),
 	c.Query("minExp"),
-	c.Query("maxExp")
+	c.Query("maxExp"),
+	c.Query("page"),
+	c.Query("limit")
 
 	var store []m.Store
 
 	errCh := make(chan error)
 	storeCh := make(chan []m.Store)
 
-	go func (name string,minDate string,maxDate string,owner string,active string,minExp string,maxExp string){
+	go func (
+		name string,
+		minDate string,
+		maxDate string,
+		owner string,
+		active string,
+		minExp string,
+		maxExp string,
+		page string,
+		limit string,
+		){
 
 		var data []m.Store
 
@@ -186,6 +198,10 @@ func GetAllStores(c *gin.Context){
 		var args []interface{}
 
 		var query string
+
+		var pg int
+
+		var lmt int
 
 		if name != "" {
 			r := regexp.MustCompile(`\W`)
@@ -290,7 +306,31 @@ func GetAllStores(c *gin.Context){
 			args = append(args, maxExp)
 		}
 
-		getDb().Model(m.Store{}).Where(query,args...).Find(&data)
+		if limit == "" {
+			lmt = 10
+		}else {
+			if lm,err := strconv.ParseInt(limit,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}else {
+				lmt = int(lm)
+			}
+		}
+
+		if page == "" {
+			pg = 1
+		}else {
+			if p,err := strconv.ParseInt(page,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}else {
+				pg = int(p)
+			}
+		}
+
+		getDb().Model(m.Store{}).Where(query,args...).Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
 
 		if len(data) < 1 {
 			errCh <- errors.New("Data not found")
@@ -301,7 +341,17 @@ func GetAllStores(c *gin.Context){
 		storeCh <- data
 
 		errCh <- nil
-	}(name,minDate,maxDate,owner,active,minExp,maxExp)
+	}(
+		name,
+		minDate,
+		maxDate,
+		owner,
+		active,
+		minExp,
+		maxExp,
+		page,
+		limit,
+	)
 
 	select {
 	case err := <- errCh : 
@@ -310,5 +360,4 @@ func GetAllStores(c *gin.Context){
 		c.JSON(http.StatusOK,gin.H{"data" : store})
 		return
 	}
-	
 }
