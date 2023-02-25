@@ -11,7 +11,9 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 
 	uri.POST("/",c.CreateStore)
 
+	uri.GET("/",c.GetAllStores)
+
 	uri.PATCH("/change-name/:id",c.UpdateStoreName)
 
-	uri.PATCH("/change")
+	uri.PATCH("/change-desc/:id",c.UpdateStoreDesc)
 }

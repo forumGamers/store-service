@@ -3,7 +3,10 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
+	"sync"
+	"time"
 
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
@@ -157,4 +160,113 @@ func UpdateStoreDesc(c *gin.Context){
 	}
 	
 	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func GetAllStores(c *gin.Context){
+	name,minDate,maxDate,owner,active,minExp,maxExp := 
+	c.Query("name"),
+	c.Query("minDate"),
+	c.Query("maxDate"),
+	c.Query("owner"),
+	c.Query("active"),
+	c.Query("minExp"),
+	c.Query("maxExp")
+
+	var store []m.Store
+
+	var wg sync.WaitGroup
+
+	var res string
+
+	tx := getDb().Model(m.Store{})
+
+	wg.Add(1)
+
+	if name != "" {
+		r := regexp.MustCompile(`\W`)
+		res = r.ReplaceAllString(name,"")
+		tx.Where("name ILIKE ?",res)
+	}
+
+	if minDate != "" && maxDate != "" {
+		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+			panic(err.Error())
+		}
+
+		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("created_at BETWEEN ? and ?",minDate,maxDate)
+
+	}else if minDate != "" {
+		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("created_at >= ?",minDate)
+
+	}else if maxDate != "" {
+		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("created_at <= ?",maxDate)
+	}
+
+	if owner != "" {
+		if _,err := strconv.ParseInt(owner,10,64) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("owner = ?",owner)
+	}
+
+	if active != "" {
+		if _,err := strconv.ParseBool(active) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("active = ?",active)
+
+	}
+
+	if minExp != "" && maxExp != "" {
+		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
+			panic(err.Error())
+		}
+
+		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("exp BETWEEN ? and ?",minExp,maxExp)
+
+	}else if minExp != "" {
+		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("exp >= ?",minExp)
+
+	}else if maxExp != "" {
+		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
+			panic(err.Error())
+		}
+
+		tx.Where("exp <= ?",maxExp)
+	}
+
+	go func ()  {
+		defer wg.Done()
+		tx.Find(&store)
+	}()
+
+	wg.Wait()
+
+	if len(store) < 1 {
+		panic("Data not found")
+	}
+
+	c.JSON(http.StatusOK,gin.H{"data" : store})
 }
