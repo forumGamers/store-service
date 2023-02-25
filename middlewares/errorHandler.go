@@ -25,7 +25,7 @@ func ErrorHandler(c *gin.Context) {
 			s = http.StatusBadRequest
 			break
 		default :
-			fmt.Println(msg)
+			fmt.Println(msg,"<<<<")
 			msg = "Internal Server Error"
 			break
 		}

@@ -64,7 +64,7 @@ func GetAllStoreStatus(c *gin.Context){
 	ch := make(chan []m.StoreStatus)
 	errCh := make(chan string)
 
-	go func(){
+	go func(name string,page string){
 		var store_status []m.StoreStatus
 
 		tx := getDb().Model(&m.StoreStatus{})
@@ -105,7 +105,7 @@ func GetAllStoreStatus(c *gin.Context){
 		}
 
 		ch <- store_status
-	}()
+	}(name,page)
 
 	select {
 	case storeStatus := <- ch :

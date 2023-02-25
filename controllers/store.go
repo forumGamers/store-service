@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"sync"
 	"time"
 
 	h "github.com/forumGamers/store-service/helper"
@@ -175,109 +174,141 @@ func GetAllStores(c *gin.Context){
 
 	var store []m.Store
 
-	var wg sync.WaitGroup
+	errCh := make(chan error)
+	storeCh := make(chan []m.Store)
 
-	var res string
+	go func (name string,minDate string,maxDate string,owner string,active string,minExp string,maxExp string){
 
-	var args []interface{}
+		var data []m.Store
 
-	var query string
+		var res string
 
-	wg.Add(1)
+		var args []interface{}
 
-	if name != "" {
-		r := regexp.MustCompile(`\W`)
-		res = r.ReplaceAllString(name,"")
-		query = h.QueryBuild(query,"name ILIKE ?")
-		args = append(args, "%"+res+"%")
+		var query string
+
+		if name != "" {
+			r := regexp.MustCompile(`\W`)
+			res = r.ReplaceAllString(name,"")
+			query = h.QueryBuild(query,"name ILIKE ?")
+			args = append(args, "%"+res+"%")
+		}
+	
+		if minDate != "" && maxDate != "" {
+			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+			args = append(args,minDate,maxDate)
+	
+		}else if minDate != "" {
+			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at >= ?")
+			args = append(args,minDate)
+	
+		}else if maxDate != "" {
+			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at <= ?")
+			args = append(args, maxDate)
+		}
+	
+		if owner != "" {
+			if _,err := strconv.ParseInt(owner,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"owner_id = ?")
+			args = append(args, owner)
+		}
+	
+		if active != "" {
+			if _,err := strconv.ParseBool(active) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"active = ?")
+			args = append(args, active)
+		}
+	
+		if minExp != "" && maxExp != "" {
+			if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"(exp BETWEEN ? and ?)")
+			args = append(args, minExp,maxExp)
+	
+		}else if minExp != "" {
+			if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"exp >= ?")
+			args = append(args, minExp)
+	
+		}else if maxExp != "" {
+			if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"exp <= ?")
+			args = append(args, maxExp)
+		}
+
+		getDb().Model(m.Store{}).Where(query,args...).Find(&data)
+
+		if len(data) < 1 {
+			errCh <- errors.New("Data not found")
+			storeCh <- nil
+			return
+		}
+
+		storeCh <- data
+
+		errCh <- nil
+	}(name,minDate,maxDate,owner,active,minExp,maxExp)
+
+	select {
+	case err := <- errCh : 
+		panic(err.Error())
+	case store = <- storeCh :
+		c.JSON(http.StatusOK,gin.H{"data" : store})
+		return
 	}
-
-	if minDate != "" && maxDate != "" {
-		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
-			panic(err.Error())
-		}
-
-		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
-		args = append(args,minDate,maxDate)
-
-	}else if minDate != "" {
-		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"created_at >= ?")
-		args = append(args,minDate)
-
-	}else if maxDate != "" {
-		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"created_at <= ?")
-		args = append(args, maxDate)
-	}
-
-	if owner != "" {
-		if _,err := strconv.ParseInt(owner,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"owner_id = ?")
-		args = append(args, owner)
-	}
-
-	if active != "" {
-		if _,err := strconv.ParseBool(active) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"active = ?")
-		args = append(args, active)
-	}
-
-	if minExp != "" && maxExp != "" {
-		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"(exp BETWEEN ? and ?)")
-		args = append(args, minExp,maxExp)
-
-	}else if minExp != "" {
-		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"exp >= ?")
-		args = append(args, minExp)
-
-	}else if maxExp != "" {
-		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		query = h.QueryBuild(query,"exp <= ?")
-		args = append(args, maxExp)
-	}
-
-	go func ()  {
-		defer wg.Done()
-		getDb().Model(m.Store{}).Where(query,args...).Find(&store)
-	}()
-
-	wg.Wait()
-
-	if len(store) < 1 {
-		panic("Data not found")
-	}
-
-	c.JSON(http.StatusOK,gin.H{"data" : store})
+	
 }
