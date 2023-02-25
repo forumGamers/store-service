@@ -8,9 +8,15 @@ type Store struct {
 	Image 				string 			`json:"image"`
 	Description 		string 			`gorm:";type:text" json:"description"`
 	Owner_id			int				`json:"Owner_id" gorm:";NOT NULL"`
-	Exp_id				uint			`json:"exp_id" gorm:";not null"`
-	Store_Status_id		uint			`json:"store_status_id" gorm:";not null"`
+	Exp					int				`json:"exp" gorm:";not null"`
+	Active				bool			`json:"active" gorm:"default:true"`
 	Items 				[]Item			`gorm:";constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:store_id"`
 	Ratings				[]StoreRating	`gorm:";constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:store_id"`
 	Transactions 		[]Transaction	`gorm:";foreignKey:store_id"`
+}
+
+func (s *Store) BeforeCreate(tx *g.DB) (err error){
+	s.Active = true
+	s.Exp = 0
+	return nil
 }
