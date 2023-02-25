@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 
+	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
 )
@@ -56,7 +57,9 @@ func CreateStoreStatus(c *gin.Context){
 }
 
 func GetAllStoreStatus(c *gin.Context){
-	name,page := c.Query("name"),c.Query("page")
+	name,page := 
+	c.Query("name"),
+	c.Query("page")
 
 	ch := make(chan []m.StoreStatus)
 	errCh := make(chan string)
@@ -66,10 +69,15 @@ func GetAllStoreStatus(c *gin.Context){
 
 		tx := getDb().Model(&m.StoreStatus{})
 
+		var args []interface{}
+
+		var query string
+
 		if name != "" {
 			r := regexp.MustCompile(`\W`)
 			result := r.ReplaceAllString(name,"")
-			tx.Where("name ILIKE ?",result)
+			query = h.QueryBuild(query,"name ILIKE ?")
+			args = append(args, "%"+result+"%")
 		}
 	
 		limit := 10
@@ -89,7 +97,7 @@ func GetAllStoreStatus(c *gin.Context){
 		tx.Limit(limit)
 	
 		
-		tx.Find(&store_status)
+		tx.Where(query,args...).Find(&store_status)
 
 		if len(store_status) < 1 {
 			errCh <- "Data not found"

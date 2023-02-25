@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	h "github.com/forumGamers/store-service/helper"
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
@@ -178,14 +179,17 @@ func GetAllStores(c *gin.Context){
 
 	var res string
 
-	tx := getDb().Model(m.Store{})
+	var args []interface{}
+
+	var query string
 
 	wg.Add(1)
 
 	if name != "" {
 		r := regexp.MustCompile(`\W`)
 		res = r.ReplaceAllString(name,"")
-		tx.Where("name ILIKE ?",res)
+		query = h.QueryBuild(query,"name ILIKE ?")
+		args = append(args, "%"+res+"%")
 	}
 
 	if minDate != "" && maxDate != "" {
@@ -197,21 +201,24 @@ func GetAllStores(c *gin.Context){
 			panic(err.Error())
 		}
 
-		tx.Where("created_at BETWEEN ? and ?",minDate,maxDate)
+		query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+		args = append(args,minDate,maxDate)
 
 	}else if minDate != "" {
 		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
 			panic(err.Error())
 		}
 
-		tx.Where("created_at >= ?",minDate)
+		query = h.QueryBuild(query,"created_at >= ?")
+		args = append(args,minDate)
 
 	}else if maxDate != "" {
 		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
 			panic(err.Error())
 		}
 
-		tx.Where("created_at <= ?",maxDate)
+		query = h.QueryBuild(query,"created_at <= ?")
+		args = append(args, maxDate)
 	}
 
 	if owner != "" {
@@ -219,7 +226,8 @@ func GetAllStores(c *gin.Context){
 			panic(err.Error())
 		}
 
-		tx.Where("owner = ?",owner)
+		query = h.QueryBuild(query,"owner_id = ?")
+		args = append(args, owner)
 	}
 
 	if active != "" {
@@ -227,8 +235,8 @@ func GetAllStores(c *gin.Context){
 			panic(err.Error())
 		}
 
-		tx.Where("active = ?",active)
-
+		query = h.QueryBuild(query,"active = ?")
+		args = append(args, active)
 	}
 
 	if minExp != "" && maxExp != "" {
@@ -240,26 +248,29 @@ func GetAllStores(c *gin.Context){
 			panic(err.Error())
 		}
 
-		tx.Where("exp BETWEEN ? and ?",minExp,maxExp)
+		query = h.QueryBuild(query,"(exp BETWEEN ? and ?)")
+		args = append(args, minExp,maxExp)
 
 	}else if minExp != "" {
 		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
 			panic(err.Error())
 		}
 
-		tx.Where("exp >= ?",minExp)
+		query = h.QueryBuild(query,"exp >= ?")
+		args = append(args, minExp)
 
 	}else if maxExp != "" {
 		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
 			panic(err.Error())
 		}
 
-		tx.Where("exp <= ?",maxExp)
+		query = h.QueryBuild(query,"exp <= ?")
+		args = append(args, maxExp)
 	}
 
 	go func ()  {
 		defer wg.Done()
-		tx.Find(&store)
+		getDb().Model(m.Store{}).Where(query,args...).Find(&store)
 	}()
 
 	wg.Wait()
