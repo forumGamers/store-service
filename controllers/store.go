@@ -2,11 +2,14 @@ package controllers
 
 import (
 	"errors"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
 
+	cfg "github.com/forumGamers/store-service/config"
 	h "github.com/forumGamers/store-service/helper"
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
@@ -22,9 +25,15 @@ func getDb() *gorm.DB {
 func CreateStore(c *gin.Context){
 	var store m.Store
 
-	name,image,description := c.PostForm("name"),c.PostForm("image"),c.PostForm("description")
+	name,description := c.PostForm("name"),c.PostForm("description")
+
+	image,er := c.FormFile("image")
 
 	owner_id := c.Request.Header.Get("id")
+
+	if er != nil {
+		panic(er.Error())
+	}
 
 	if name == ""  {
 		panic("Invalid data")
@@ -34,9 +43,23 @@ func CreateStore(c *gin.Context){
 		panic("Forbidden")
 	}
 
-	store.Name = name
+	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+		panic(err.Error())
+	}
 
-	store.Image = image
+	file,_ := os.Open("uploads/"+image.Filename)
+
+	if data,err := ioutil.ReadAll(file) ; err != nil {
+		panic(err.Error())
+	}else {
+		if url,err := cfg.UploadImage(data,image.Filename) ;err != nil {
+			panic(err.Error())
+		}else {
+			store.Image = url
+		}
+	}
+
+	store.Name = name
 
 	store.Description = description
 
@@ -57,6 +80,7 @@ func CreateStore(c *gin.Context){
 	}()
 
 	if <- err == nil {
+		os.Remove("uploads/"+image.Filename)
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {
