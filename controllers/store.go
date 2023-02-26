@@ -49,14 +49,33 @@ func CreateStore(c *gin.Context){
 
 	file,_ := os.Open("uploads/"+image.Filename)
 
-	if data,err := ioutil.ReadAll(file) ; err != nil {
-		panic(err.Error())
-	}else {
-		if url,err := cfg.UploadImage(data,image.Filename) ;err != nil {
-			panic(err.Error())
+	data,errParse := ioutil.ReadAll(file)
+	
+	if errParse != nil {
+		panic(errParse.Error())
+	}
+
+	urlCh := make (chan string)
+	errCh := make(chan error)
+
+	go func (data []byte, image string){
+		if url,err := cfg.UploadImage(data,image) ;err != nil {
+			errCh <- errors.New(err.Error())
+			urlCh <- ""
 		}else {
-			store.Image = url
+			errCh <- nil
+			urlCh <- url
+		}	
+		return
+	}(data,image.Filename)
+
+	select {
+	case err := <- errCh :
+		if err != nil {
+			panic(err.Error())
 		}
+	case url := <- urlCh :
+		store.Image = url
 	}
 
 	store.Name = name

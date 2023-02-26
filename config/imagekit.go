@@ -30,12 +30,11 @@ func ImagekitConnection() *imagekit.Client{
 	}
 }
 
-func UploadImage (file []byte,fileName string) (string, error){
+func UploadImage(file []byte,fileName string) (string, error){
 
 	ur := imagekit.UploadRequest{
 		File: file,
 		FileName: fileName,
-		IsPrivateFile: true,
 	}
 
 	ctx := context.Background()
