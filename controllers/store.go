@@ -357,7 +357,36 @@ func GetAllStores(c *gin.Context){
 	case err := <- errCh : 
 		panic(err.Error())
 	case store = <- storeCh :
-		c.JSON(http.StatusOK,gin.H{"data" : store})
+		c.JSON(http.StatusOK,store)
 		return
 	}
+}
+
+func GetStoreById(c *gin.Context){
+	id := c.Param("id")
+
+	errCh := make(chan error)
+
+	ch := make(chan m.Store)
+
+	go func (id string){
+		var store m.Store
+
+		if err := getDb().Where("id = ?",id).Find(&store).Error ; err != nil {
+			errCh <- errors.New("Data not found")
+			ch <- m.Store{}
+			return
+		}else {
+			errCh <- nil
+			ch <- store
+		}
+	}(id)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	store := <- ch
+
+	c.JSON(http.StatusOK,store)
 }

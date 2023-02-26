@@ -16,4 +16,6 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 	uri.PATCH("/change-name/:id",c.UpdateStoreName)
 
 	uri.PATCH("/change-desc/:id",c.UpdateStoreDesc)
+
+	uri.GET("/:id",c.GetStoreById)
 }
