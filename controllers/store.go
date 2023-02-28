@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+
 	"strconv"
 	"time"
 
@@ -27,13 +28,7 @@ func CreateStore(c *gin.Context){
 
 	name,description := c.PostForm("name"),c.PostForm("description")
 
-	image,er := c.FormFile("image")
-
 	owner_id := c.Request.Header.Get("id")
-
-	if er != nil {
-		panic(er.Error())
-	}
 
 	if name == ""  {
 		panic("Invalid data")
@@ -43,63 +38,105 @@ func CreateStore(c *gin.Context){
 		panic("Forbidden")
 	}
 
-	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+	id,er := strconv.ParseInt(owner_id,10,64)
+
+	if er != nil {
+		panic("Invalid data")
+	}
+
+	checkCh := make(chan error)
+
+	go func (name string, ownerId int) {
+		var check m.Store
+
+		getDb().Where("name = ? or owner_id = ?",name,ownerId).First(&check)
+
+		if c := check.Name == name ; c != false {
+			checkCh <- errors.New("name is already use")
+			return
+		}
+
+		if c := check.Owner_id == ownerId ; c != false {
+			checkCh <- errors.New("you already have a store")
+			return
+		}
+
+		checkCh <- nil
+	}(name,int(id))
+
+	if err := <- checkCh ; err != nil {
 		panic(err.Error())
 	}
 
-	file,_ := os.Open("uploads/"+image.Filename)
+	if image,err := c.FormFile("image") ; err == nil {
 
-	data,errParse := ioutil.ReadAll(file)
-	
-	if errParse != nil {
-		panic(errParse.Error())
-	}
-
-	urlCh := make (chan string)
-	errCh := make(chan error)
-
-	go func (data []byte, image string){
-		if url,err := cfg.UploadImage(data,image) ;err != nil {
-			errCh <- errors.New(err.Error())
-			urlCh <- ""
-		}else {
-			errCh <- nil
-			urlCh <- url
-		}	
-		return
-	}(data,image.Filename)
-
-	select {
-	case err := <- errCh :
-		if err != nil {
+		if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
 			panic(err.Error())
 		}
-	case url := <- urlCh :
-		store.Image = url
+	
+		file,_ := os.Open("uploads/"+image.Filename)
+	
+		data,errParse := ioutil.ReadAll(file)
+		
+		if errParse != nil {
+			panic(errParse.Error())
+		}
+	
+		urlCh := make (chan string)
+		fileIdCh := make(chan string)
+		errCh := make(chan error)
+	
+		go func (data []byte, image string){
+			url ,fileId ,errUpload := cfg.UploadImage(data,image)
+	
+			if errUpload != nil {
+				urlCh <- ""
+				fileIdCh <- ""
+				errCh <- errors.New("Bad Gateway")
+				return
+			}
+	
+			urlCh <- url
+			fileIdCh <- fileId
+			errCh <- nil
+			return
+		}(data,image.Filename)
+	
+		select {
+		case url := <- urlCh :
+			if url == "" {
+				panic("Internal Server Error")
+			}else {
+				store.Image = url
+				store.ImageId = <- fileIdCh
+			}
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		}
+
+		os.Remove("uploads/"+image.Filename)
 	}
 
 	store.Name = name
 
 	store.Description = description
 
-	id,_ := strconv.ParseInt(owner_id,10,64)
-
 	store.Owner_id = int(id)
 
 	err := make(chan error)
 
 	go func () {
-		res := getDb().Create(&store)
 
-		if res.Error != nil {
-			err <- res.Error
-		}else {
-			err <- nil
+		if errCreate := getDb().Create(&store).Error ; errCreate != nil {
+			err <- errCreate
 		}
+
+		err <- nil
 	}()
 
 	if <- err == nil {
-		os.Remove("uploads/"+image.Filename)
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {

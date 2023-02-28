@@ -30,7 +30,7 @@ func ImagekitConnection() *imagekit.Client{
 	}
 }
 
-func UploadImage(file []byte,fileName string) (string, error){
+func UploadImage(file []byte,fileName string) (string, string , error){
 
 	ur := imagekit.UploadRequest{
 		File: file,
@@ -40,8 +40,12 @@ func UploadImage(file []byte,fileName string) (string, error){
 	ctx := context.Background()
 
 	if upr,err := ImagekitConnection().Upload.ServerUpload(ctx,&ur) ; err != nil {
-		return "",errors.New(err.Error())
+		return "",
+			   "",
+			   errors.New(err.Error())
 	}else {
-		return upr.URL,nil
+		return upr.URL,
+			   upr.FileID,
+			   nil
 	}
 }

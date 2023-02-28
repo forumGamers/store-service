@@ -6,6 +6,7 @@ type Store struct {
 	g.Model
 	Name 				string 			`gorm:";varchar(20);NOT NULL" json:"name"`
 	Image 				string 			`json:"image"`
+	ImageId				string			`json:"ImageId"`
 	Description 		string 			`gorm:";type:text" json:"description"`
 	Owner_id			int				`json:"Owner_id" gorm:";NOT NULL"`
 	Exp					int				`json:"exp" gorm:";not null"`

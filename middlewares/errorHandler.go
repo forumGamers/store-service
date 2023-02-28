@@ -24,6 +24,14 @@ func ErrorHandler(c *gin.Context) {
 		case "Invalid data":
 			s = http.StatusBadRequest
 			break
+		case "name is already use" :
+			s = http.StatusConflict
+			break
+		case "you already have a store" :
+			s = http.StatusConflict
+			break
+		case "Bad Gateway" :
+			s = http.StatusBadGateway
 		default :
 			fmt.Println(msg)
 			msg = "Internal Server Error"
