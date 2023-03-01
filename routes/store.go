@@ -17,5 +17,7 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 
 	uri.PATCH("/change-desc/:id",c.UpdateStoreDesc)
 
+	uri.PATCH("/change-image",c.UpdateStoreImage)
+
 	uri.GET("/:id",c.GetStoreById)
 }

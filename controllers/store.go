@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"regexp"
@@ -87,7 +88,7 @@ func CreateStore(c *gin.Context){
 		errCh := make(chan error)
 	
 		go func (data []byte, image string){
-			url ,fileId ,errUpload := cfg.UploadImage(data,image)
+			url ,fileId ,errUpload := cfg.UploadImage(data,image,"storeImage")
 	
 			if errUpload != nil {
 				urlCh <- ""
@@ -239,6 +240,102 @@ func UpdateStoreDesc(c *gin.Context){
 		panic(err.Error())
 	}
 	
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func UpdateStoreImage(c *gin.Context){
+	var store m.Store
+
+	image , r := c.FormFile("image")
+
+	id := c.Request.Header.Get("id")
+
+	if r != nil {
+		panic("Invalid data")
+	}
+
+	checkCh := make(chan m.Store)
+	errCheckCh := make(chan error)
+
+	go func(id string){
+		var check m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&check).Error ; err != nil {
+			errCheckCh <- errors.New("Data not found")
+			checkCh <- check
+			return
+		}
+
+		errCheckCh <- nil
+		checkCh <- check
+	}(id)
+
+	if err := <- errCheckCh ; err != nil {
+		panic(err.Error())
+	}
+
+	store = <- checkCh
+
+	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+		panic(err.Error())
+	}
+
+	file,_ := os.Open("uploads/"+image.Filename)
+
+	data,errParse := ioutil.ReadAll(file)
+	
+	if errParse != nil {
+		panic(errParse.Error())
+	}
+
+	urlCh := make(chan string)
+	fileIdCh := make(chan string)
+	errCh := make(chan error)
+
+	go func(data []byte ,image *multipart.FileHeader,fileId string){
+
+		url,id,err := cfg.UpdateImage(data,image.Filename,"storeImage",fileId)
+
+		if err != nil {
+			errCh <- errors.New(err.Error())
+			urlCh <- url
+			fileIdCh <- id
+			return
+		}
+
+		urlCh <- url
+		fileIdCh <- id
+		errCh <- nil
+	}(data ,image,store.ImageId)
+
+
+	select {
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		case url := <- urlCh :
+			store.Image = url
+			store.ImageId = <- fileIdCh
+		}
+
+	os.Remove("uploads/"+image.Filename)
+
+	errUpdate := make(chan error)
+
+	go func(store m.Store){
+		if err := getDb().Save(&store).Error ; err != nil {
+			errUpdate <- errors.New(err.Error())
+			return
+		}
+
+		errUpdate <- nil
+	}(store)
+
+	if err := <- errUpdate ; err != nil {
+		panic(err.Error())
+	}
+
 	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
 

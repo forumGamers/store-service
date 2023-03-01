@@ -30,11 +30,13 @@ func ImagekitConnection() *imagekit.Client{
 	}
 }
 
-func UploadImage(file []byte,fileName string) (string, string , error){
+func UploadImage(file []byte,fileName string,folder string) (string, string , error){
 
 	ur := imagekit.UploadRequest{
 		File: file,
 		FileName: fileName,
+		UseUniqueFileName: true,
+		Folder: folder,
 	}
 
 	ctx := context.Background()
@@ -47,5 +49,21 @@ func UploadImage(file []byte,fileName string) (string, string , error){
 		return upr.URL,
 			   upr.FileID,
 			   nil
+	}
+}
+
+func UpdateImage(file []byte,fileName string,folder string,updatedfileId string) (string, string, error) {
+
+	if url,fileId,err := UploadImage(file,fileName,folder) ; err != nil {
+		return "","",errors.New(err.Error())
+	}else {
+
+		ctx := context.Background()
+
+		if err := ImagekitConnection().Media.DeleteFile(ctx,updatedfileId) ; err != nil {
+			return url,fileId,err
+		}
+
+		return url,fileId,nil
 	}
 }
