@@ -149,8 +149,6 @@ func UpdateStoreName(c *gin.Context){
 	var store m.Store
 	id := c.Request.Header.Get("id")
 
-	storeId := c.Param("id")
-
 	name := c.PostForm("name")
 
 	errCh := make(chan error)
@@ -169,12 +167,12 @@ func UpdateStoreName(c *gin.Context){
 		panic(er.Error())
 	}
 
-	go func ()  {
-		if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
+	go func (id int)  {
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
 			errCh <- errors.New("Data not found")
 		}
 	
-		if int(Id) != store.Owner_id {
+		if int(id) != store.Owner_id {
 			errCh <- errors.New("Forbidden")
 		}
 	
@@ -185,7 +183,7 @@ func UpdateStoreName(c *gin.Context){
 		}
 		
 		errCh <- nil
-	}()
+	}(int(Id))
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
@@ -201,8 +199,6 @@ func UpdateStoreDesc(c *gin.Context){
 
 	id := c.Request.Header.Get("id")
 
-	storeId := c.Param("id")
-
 	if id == "" {
 		panic("Forbidden")
 	}
@@ -215,8 +211,8 @@ func UpdateStoreDesc(c *gin.Context){
 
 	errCh := make(chan error)
 
-	go func ()  {
-		if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
+	go func (id int)  {
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
 			errCh <- errors.New("Data not found")
 			return
 		}
@@ -234,7 +230,7 @@ func UpdateStoreDesc(c *gin.Context){
 		}
 
 		errCh <- nil
-	}()
+	}(int(Id))
 
 	if err := <- errCh; err != nil {
 		panic(err.Error())
@@ -254,7 +250,7 @@ func UpdateStoreImage(c *gin.Context){
 		panic("Invalid data")
 	}
 
-	checkCh := make(chan m.Store)
+	storeCh := make(chan m.Store)
 	errCheckCh := make(chan error)
 
 	go func(id string){
@@ -262,19 +258,19 @@ func UpdateStoreImage(c *gin.Context){
 
 		if err := getDb().Where("owner_id = ?",id).First(&check).Error ; err != nil {
 			errCheckCh <- errors.New("Data not found")
-			checkCh <- check
+			storeCh <- check
 			return
 		}
 
 		errCheckCh <- nil
-		checkCh <- check
+		storeCh <- check
 	}(id)
 
 	if err := <- errCheckCh ; err != nil {
 		panic(err.Error())
 	}
 
-	store = <- checkCh
+	store = <- storeCh
 
 	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
 		panic(err.Error())
@@ -566,4 +562,84 @@ func GetStoreById(c *gin.Context){
 	store := <- ch
 
 	c.JSON(http.StatusOK,store)
+}
+
+func DeactiveStore(c *gin.Context){
+	id := c.Request.Header.Get("id")
+
+	if id == "" {
+		panic("Forbidden")
+	}
+
+	Id,er := strconv.ParseInt(id,10,64)
+
+	if er != nil {
+		panic(er.Error())
+	}
+
+	errCh := make(chan error)
+
+	go func(id int){
+		var store m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		store.Active = false
+
+		if err := getDb().Save(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func ReactivedStore(c *gin.Context){
+	id := c.Request.Header.Get("id")
+
+	if id == "" {
+		panic("Forbidden")
+	}
+
+	Id,er := strconv.ParseInt(id,10,64)
+
+	if er != nil {
+		panic(er.Error())
+	}
+
+	errCh := make(chan error)
+
+	go func(id int){
+		var store m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		store.Active = true
+
+		if err := getDb().Save(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
