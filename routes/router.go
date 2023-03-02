@@ -33,5 +33,7 @@ func Routes(){
 
 	r.store_status_routes(groupRoutes)
 
+	r.itemRoutes(groupRoutes)
+
 	r.router.Run(":4000")
 }

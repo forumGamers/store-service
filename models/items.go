@@ -10,6 +10,19 @@ type Item struct {
 	Store_id 		uint 			`gorm:";NOT NULL"`
 	Status			string			`json:"status"`		
 	Slug			string			`json:"slug"`
+	Stock			int				`json:"stock"`
+	Price			int				`json:"price"`
+	Description		string			`json:"description"`
+	Discount		int				`json:"discount"`
 	Ratings 		[]ItemRating	`gorm:";foreignKey:item_id;references:id"`
 	Store			Store			`gorm:";foreignKey:store_id;references:id"`	
+}
+
+func (i *Item) BeforeCreate(tx *g.DB) error {
+	if i.Stock > 0 {
+		i.Status = "Available"
+	}else {
+		i.Status = "Not Available"
+	}
+	return nil
 }
