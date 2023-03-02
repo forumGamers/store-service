@@ -21,6 +21,9 @@ func ErrorHandler(c *gin.Context) {
 		case "Data not found" :
 			s = http.StatusNotFound
 			break
+		case "Failed to parse image" :
+			s = http.StatusBadRequest
+			break
 		case "Forbidden":
 			s = http.StatusForbidden
 			break

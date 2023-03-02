@@ -49,15 +49,19 @@ func CreateItem(c *gin.Context){
 	}else {
 		errCh := make(chan error)
 		storeCh := make(chan uint)
+		storeNameCh := make(chan string)
 		go func (id int64) {
 			var store m.Store
 			if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
 				errCh <- errors.New(err.Error())
 				storeCh <- 0
+				storeNameCh <- ""
+				return
 			}
 
 			errCh <- nil
 			storeCh <- store.ID
+			storeNameCh <- store.Name
 		}(Id)
 
 		if err := <- errCh ; err != nil {
@@ -65,11 +69,12 @@ func CreateItem(c *gin.Context){
 		}
 
 		item.Store_id = <- storeCh
+		storeName := <- storeNameCh
+		item.Slug = h.SlugGenerator(name+" by "+storeName)
 	}
 
 	item.Name = name
 	item.Description = description
-	item.Slug = h.SlugGenerator(name)
 
 	var img string
 
@@ -84,7 +89,7 @@ func CreateItem(c *gin.Context){
 		data,errParse := ioutil.ReadAll(file)
 		
 		if errParse != nil {
-			panic(errParse.Error())
+			panic("Failed to parse image")
 		}
 	
 		urlCh := make (chan string)
