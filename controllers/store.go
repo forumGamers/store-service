@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -69,6 +70,8 @@ func CreateStore(c *gin.Context){
 		panic(err.Error())
 	}
 
+	var img string
+
 	if image,err := c.FormFile("image") ; err == nil {
 
 		if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
@@ -108,6 +111,7 @@ func CreateStore(c *gin.Context){
 			if url == "" {
 				panic("Internal Server Error")
 			}else {
+				file.Close()
 				store.Image = url
 				store.ImageId = <- fileIdCh
 			}
@@ -116,8 +120,7 @@ func CreateStore(c *gin.Context){
 				panic(err.Error())
 			}
 		}
-
-		os.Remove("uploads/"+image.Filename)
+		img = image.Filename
 	}
 
 	store.Name = name
@@ -138,6 +141,9 @@ func CreateStore(c *gin.Context){
 	}()
 
 	if <- err == nil {
+		if err := os.Remove("uploads/"+img) ; err != nil {
+			fmt.Println(err)
+		}
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {

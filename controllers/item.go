@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -70,46 +71,58 @@ func CreateItem(c *gin.Context){
 	item.Description = description
 	item.Slug = h.SlugGenerator(name)
 
+	var img string
+
 	if image,err := c.FormFile("image") ; err == nil {
+
 		if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
 			panic(err.Error())
 		}
-
+	
 		file,_ := os.Open("uploads/"+image.Filename)
-
+	
 		data,errParse := ioutil.ReadAll(file)
 		
 		if errParse != nil {
 			panic(errParse.Error())
 		}
-
+	
 		urlCh := make (chan string)
 		fileIdCh := make(chan string)
 		errCh := make(chan error)
-
-		go func(data []byte ,imageName string) {
-			url,fileId,err := cfg.UploadImage(data,imageName,"itemImage") 
-
-			if err != nil {
+	
+		go func (data []byte, image string){
+			url ,fileId ,errUpload := cfg.UploadImage(data,image,"itemImage")
+	
+			if errUpload != nil {
 				urlCh <- ""
 				fileIdCh <- ""
-				errCh <- errors.New(err.Error())
+				errCh <- errors.New("Bad Gateway")
 				return
 			}
-
+	
 			urlCh <- url
 			fileIdCh <- fileId
 			errCh <- nil
+			return
 		}(data,image.Filename)
-
-		if err := <- errCh ; err != nil {
-			panic(err.Error())
-		}else {
-			item.Image = <- urlCh
-			item.ImageId = <- fileIdCh
+	
+		select {
+		case url := <- urlCh :
+			if url == "" {
+				panic("Internal Server Error")
+			}else {
+				file.Close()
+				item.Image = url
+				item.ImageId = <- fileIdCh
+			}
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
 		}
 
-		os.Remove("uploads/"+image.Filename)
+		img = image.Filename
 	}
 
 	errCh := make(chan error)
@@ -125,6 +138,10 @@ func CreateItem(c *gin.Context){
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
+	}
+
+	if err := os.Remove("uploads/"+img) ; err != nil {
+		fmt.Println(err)
 	}
 
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
