@@ -662,7 +662,7 @@ func GetAllStores(c *gin.Context){
 			}
 		}
 
-		getDb().Model(m.Store{}).Where(query,args...).Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
+		getDb().Model(m.Store{}).Where(query,args...).Preload("Items").Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
 
 		if len(data) < 1 {
 			errCh <- errors.New("Data not found")
@@ -706,7 +706,7 @@ func GetStoreById(c *gin.Context){
 	go func (id string){
 		var store m.Store
 
-		if err := getDb().Where("id = ?",id).Find(&store).Error ; err != nil {
+		if err := getDb().Where("id = ?",id).Preload("Items").Find(&store).Error ; err != nil {
 			errCh <- errors.New("Data not found")
 			ch <- m.Store{}
 			return

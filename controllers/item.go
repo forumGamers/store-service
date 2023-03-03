@@ -366,7 +366,7 @@ func GetAllItem(c *gin.Context){
 			}
 		}
 
-		getDb().Model(m.Item{}).Where(query,args...).Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
+		getDb().Model(m.Item{}).Where(query,args...).Preload("Store").Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
 
 		if len(data) < 1 {
 			errCh <- errors.New("Data not found")
