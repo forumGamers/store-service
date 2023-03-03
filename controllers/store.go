@@ -687,7 +687,9 @@ func GetAllStores(c *gin.Context){
 
 	select {
 	case err := <- errCh : 
-		panic(err.Error())
+		if err != nil {
+			panic(err.Error())
+		}
 	case store = <- storeCh :
 		c.JSON(http.StatusOK,store)
 		return

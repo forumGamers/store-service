@@ -10,4 +10,6 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 	uri := rg.Group("/item")
 
 	uri.POST("/",c.CreateItem)
+
+	uri.GET("/",c.GetAllItem)
 }
