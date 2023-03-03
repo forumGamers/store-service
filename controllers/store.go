@@ -123,6 +123,58 @@ func CreateStore(c *gin.Context){
 		img = image.Filename
 	}
 
+	var bgImg string
+
+	if bg,err := c.FormFile("background") ; err == nil {
+		if err := c.SaveUploadedFile(bg,"uploads/"+bg.Filename) ; err != nil {
+			panic(err.Error())
+		}
+
+		file,_ := os.Open("uploads/"+bg.Filename)
+
+		data,errParse := ioutil.ReadAll(file)
+		
+		if errParse != nil {
+			panic(errParse.Error())
+		}
+	
+		bgCh := make (chan string)
+		bgIdCh := make(chan string)
+		errBgCh := make(chan error)
+	
+		go func (data []byte, image string){
+			url ,fileId ,errUpload := cfg.UploadImage(data,image,"storeImage")
+	
+			if errUpload != nil {
+				bgCh <- ""
+				bgIdCh <- ""
+				errBgCh <- errors.New("Bad Gateway")
+				return
+			}
+	
+			bgCh <- url
+			bgIdCh <- fileId
+			errBgCh <- nil
+			return
+		}(data,bg.Filename)
+	
+		select {
+		case url := <- bgCh :
+			if url == "" {
+				panic("Internal Server Error")
+			}else {
+				file.Close()
+				store.Background = url
+				store.BackgroundId = <- bgIdCh
+			}
+		case err := <- errBgCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		}
+		bgImg = bg.Filename
+	}
+
 	store.Name = name
 
 	store.Description = description
@@ -142,6 +194,9 @@ func CreateStore(c *gin.Context){
 
 	if <- err == nil {
 		if err := os.Remove("uploads/"+img) ; err != nil {
+			fmt.Println(err)
+		}
+		if err := os.Remove("uploads/"+bgImg) ; err != nil {
 			fmt.Println(err)
 		}
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
