@@ -19,6 +19,8 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 
 	uri.PATCH("/change-image",c.UpdateStoreImage)
 
+	uri.PATCH("/change-background",c.UpdateStoreBg)
+
 	uri.PATCH("/deactived",c.DeactiveStore)
 
 	uri.PATCH("/reactived",c.ReactivedStore)
