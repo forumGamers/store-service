@@ -13,5 +13,7 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri.GET("/",c.GetAllItem)
 
+	uri.GET("/store/:storeId",c.GetItemByStoreId)
+
 	uri.GET("/:slug",c.GetItemBySlug)
 }

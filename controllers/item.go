@@ -457,3 +457,36 @@ func GetItemBySlug(c *gin.Context){
 
 	c.JSON(http.StatusOK,item)
 }
+
+func GetItemByStoreId(c *gin.Context){
+	storeId := c.Param("storeId")
+
+	errCh := make(chan error)
+	dataCh := make(chan []m.Item)
+
+	go func (id string)  {
+		var data []m.Item 
+		if err := getDb().Model(m.Item{}).Where("store_id = ?",id).Find(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				dataCh <- []m.Item{}
+				return
+			}else {
+				errCh <- errors.New(err.Error())
+				dataCh <- []m.Item{}
+				return
+			}
+		}
+
+		errCh <- nil
+		dataCh <- data
+	}(storeId)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	items := <- dataCh
+
+	c.JSON(http.StatusOK,items)
+}
