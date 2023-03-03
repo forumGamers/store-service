@@ -14,6 +14,7 @@ import (
 	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 
@@ -27,6 +28,27 @@ func CreateItem(c *gin.Context){
 	c.PostForm("price"),
 	c.PostForm("description"),
 	c.PostForm("discount")
+
+	if name == "" {
+		panic("Invalid data")
+	}else {
+		checkCh := make(chan error)
+		go func(name string,id string){
+			var data m.Item
+			if err := getDb().Where("name = ? and owner_id = ?",name,id).First(&data).Error ; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					checkCh <- nil
+					return
+				}
+			}
+
+			checkCh <- errors.New("Conflict")
+		}(name,id)
+
+		if err := <- checkCh ; err != nil {
+			panic(err.Error())
+		}
+	}
 
 	if s,r := strconv.ParseInt(stock,10,64) ; r == nil {
 		item.Stock = int(s)
