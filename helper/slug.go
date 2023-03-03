@@ -18,10 +18,10 @@ func SlugGenerator(slug string) string {
 		}
 	}
 
-	pre := "%"+strconv.FormatFloat(math.Floor(float64( 100 / p)),'f',2,64)+"%"
+	pre := strconv.FormatFloat(math.Floor(float64( 100 / p)),'f',0,64)
 
 	r := regexp.MustCompile(" ")
-	res := r.ReplaceAllString(slug,pre)
+	res := r.ReplaceAllString(slug,"_"+pre+"_")
 
-	return pre+res+pre
+	return pre+"_"+res+"_"+pre
 }

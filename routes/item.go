@@ -12,4 +12,6 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 	uri.POST("/",c.CreateItem)
 
 	uri.GET("/",c.GetAllItem)
+
+	uri.GET("/:slug",c.GetItemBySlug)
 }

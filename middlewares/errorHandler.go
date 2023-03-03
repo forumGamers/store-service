@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 func ErrorHandler(c *gin.Context) {
@@ -16,7 +15,7 @@ func ErrorHandler(c *gin.Context) {
 			return
 		}
 		switch msg {
-		case gorm.ErrRecordNotFound :
+		case "record not found" :
 			msg = "Data not found"
 		case "Data not found" :
 			s = http.StatusNotFound

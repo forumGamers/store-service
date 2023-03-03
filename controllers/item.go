@@ -268,8 +268,10 @@ func GetAllItem(c *gin.Context){
 		}
 
 		if status != "" {
+			r := regexp.MustCompile(`\W`)
+			x := r.ReplaceAllString(status,"")
 			query = h.QueryBuild(query,"status = ?")
-			args = append(args, status)
+			args = append(args, x)
 		}
 
 		if minPrice != "" && maxPrice != "" {
@@ -402,4 +404,34 @@ func GetAllItem(c *gin.Context){
 		c.JSON(http.StatusOK,item)
 		return
 	}
+}
+
+func GetItemBySlug(c *gin.Context){
+	slug := c.Param("slug")
+
+	r := regexp.MustCompile(`[^\w%.]`)
+	res := r.ReplaceAllString(slug,"")
+
+	errCh := make(chan error)
+	itemCh := make(chan m.Item)
+
+	go func (str string){
+		var data m.Item
+		if err := getDb().Model(m.Item{}).Where("slug = ?",str).Preload("Store").First(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			itemCh <- m.Item{}
+			return
+		}
+
+		errCh <- nil
+		itemCh <- data
+	}(res)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	item := <- itemCh
+
+	c.JSON(http.StatusOK,item)
 }
