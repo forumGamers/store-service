@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"regexp"
@@ -800,4 +801,101 @@ func UpdateItemName(c *gin.Context){
 	}
 
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
+}
+
+func UpdateItemImage(c *gin.Context){
+	var item m.Item
+
+	image , r := c.FormFile("image")
+
+	id := c.Param("id")
+
+	if r != nil {
+		panic("Invalid data")
+	}
+
+	itemCh := make(chan m.Item)
+	errCheckCh := make(chan error)
+
+	go func(id string){
+		var check m.Item
+
+		if err := getDb().Where("id = ?",id).First(&check).Error ; err != nil {
+			errCheckCh <- errors.New("Data not found")
+			itemCh <- check
+			return
+		}
+
+		errCheckCh <- nil
+		itemCh <- check
+	}(id)
+
+	if err := <- errCheckCh ; err != nil {
+		panic(err.Error())
+	}
+
+	item = <- itemCh
+
+	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+		panic(err.Error())
+	}
+
+	file,_ := os.Open("uploads/"+image.Filename)
+
+	data,errParse := ioutil.ReadAll(file)
+	
+	if errParse != nil {
+		panic(errParse.Error())
+	}
+
+	urlCh := make(chan string)
+	fileIdCh := make(chan string)
+	errCh := make(chan error)
+
+	go func(data []byte ,image *multipart.FileHeader,fileId string){
+
+		url,id,err := cfg.UpdateImage(data,image.Filename,"itemImage",fileId)
+
+		if err != nil {
+			errCh <- errors.New(err.Error())
+			urlCh <- url
+			fileIdCh <- id
+			return
+		}
+
+		urlCh <- url
+		fileIdCh <- id
+		errCh <- nil
+	}(data ,image,item.ImageId)
+
+
+	select {
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		case url := <- urlCh :
+			file.Close()
+			item.Image = url
+			item.ImageId = <- fileIdCh
+		}
+
+	os.Remove("uploads/"+image.Filename)
+
+	errUpdate := make(chan error)
+
+	go func(item m.Item){
+		if err := getDb().Save(&item).Error ; err != nil {
+			errUpdate <- errors.New(err.Error())
+			return
+		}
+
+		errUpdate <- nil
+	}(item)
+
+	if err := <- errUpdate ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }

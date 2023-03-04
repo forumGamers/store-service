@@ -57,13 +57,13 @@ func UpdateImage(file []byte,fileName string,folder string,updatedfileId string)
 	if url,fileId,err := UploadImage(file,fileName,folder) ; err != nil {
 		return "","",errors.New(err.Error())
 	}else {
+		if updatedfileId != "" {
+			ctx := context.Background()
 
-		ctx := context.Background()
-
-		if err := ImagekitConnection().Media.DeleteFile(ctx,updatedfileId) ; err != nil {
-			return url,fileId,err
+			if err := ImagekitConnection().Media.DeleteFile(ctx,updatedfileId) ; err != nil {
+				return url,fileId,err
+			}
 		}
-
 		return url,fileId,nil
 	}
 }

@@ -17,5 +17,9 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri.PATCH("/change-desc/:id",c.UpdateItemDesc)
 
+	uri.PATCH("/change-name/:id",c.UpdateItemName)
+
+	uri.PATCH("/change-image/:id",c.UpdateItemImage)
+
 	uri.GET("/:slug",c.GetItemBySlug)
 }
