@@ -899,3 +899,35 @@ func UpdateItemImage(c *gin.Context){
 
 	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
+
+func AddStock(c *gin.Context){
+	id := c.Param("id")
+
+	stock := c.PostForm("stock")
+
+	s,r := strconv.ParseInt(stock,10,64)
+
+	if r != nil {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	go func (id string,stock int)  {
+		if err := getDb().Model(m.Item{}).Where("id = ?",id).Update("stock",stock).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+			}else {
+				errCh <- err
+			}
+		}
+
+		errCh <- nil
+	}(id,int(s))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
+}
