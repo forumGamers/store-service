@@ -931,3 +931,35 @@ func AddStock(c *gin.Context){
 
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
 }
+
+func UpdatePrice(c *gin.Context){
+	id := c.Param("id")
+
+	price := c.PostForm("price")
+
+	p,r := strconv.ParseInt(price,10,64)
+
+	if r != nil {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	go func (id string,price int)  {
+		if err := getDb().Model(m.Item{}).Where("id = ?",id).Update("price",price).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+			}else {
+				errCh <- err
+			}
+		}
+
+		errCh <- nil
+	}(id,int(p))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
+}
