@@ -460,13 +460,206 @@ func GetItemBySlug(c *gin.Context){
 
 func GetItemByStoreId(c *gin.Context){
 	storeId := c.Param("storeId")
+	name,
+	minDate,
+	maxDate,
+	minStock,
+	maxStock,
+	status,
+	minPrice,
+	maxPrice,
+	minDiscount,
+	maxDiscount,
+	limit,
+	page := 
+	c.Query("name"),
+	c.Query("minDate"),
+	c.Query("maxDate"),
+	c.Query("minStock"),
+	c.Query("maxStock"),
+	c.Query("status"),
+	c.Query("minPrice"),
+	c.Query("maxPrice"),
+	c.Query("minDiscount"),
+	c.Query("maxDiscount"),
+	c.Query("limit"),
+	c.Query("page")
 
 	errCh := make(chan error)
 	dataCh := make(chan []m.Item)
 
-	go func (id string)  {
+	go func (
+		id string,
+		name string,
+		minDate string,
+		maxDate string,
+		minStock string,
+		maxStock string,
+		status string,
+		minPrice string,
+		maxPrice string,
+		minDiscount string,
+		maxDiscount string,
+		limit string,
+		page string,
+		)  {
 		var data []m.Item 
-		if err := getDb().Model(m.Item{}).Where("store_id = ?",id).Find(&data).Error ; err != nil {
+
+		var res string
+
+		var args []interface{}
+
+		query := "store_id = ?"
+		args = append(args, id)
+
+		var pg int
+
+		var lmt int
+
+		if name != "" {
+			r := regexp.MustCompile(`\W`)
+			res = r.ReplaceAllString(name,"")
+			query = h.QueryBuild(query,"name ILIKE ?")
+			args = append(args, "%"+res+"%")
+		}
+
+		if minDate != "" && maxDate != "" {
+			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+			args = append(args,minDate,maxDate)
+		}else if minDate != "" {
+			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at >= ?")
+			args = append(args,minDate)
+		}else if maxDate != "" {
+			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at <= ?")
+			args = append(args, maxDate)
+		}
+
+		if status != "" {
+			r := regexp.MustCompile(`\W`)
+			x := r.ReplaceAllString(status,"")
+			query = h.QueryBuild(query,"status = ?")
+			args = append(args, x)
+		}
+
+		if minPrice != "" && maxPrice != "" {
+			if _,err := strconv.ParseInt(minPrice,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			if _,err := strconv.ParseInt(maxPrice,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"(price BETWEEN ? and ?)")
+			args = append(args, minPrice,maxPrice)
+		}else if minPrice != "" {
+			if _,err := strconv.ParseInt(minPrice,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"price >= ?")
+			args = append(args, minPrice)
+		}else if maxPrice != "" {
+			if _,err := strconv.ParseInt(maxPrice,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+
+			query = h.QueryBuild(query,"price <= ?")
+			args = append(args, maxPrice)
+		}
+
+		if minDiscount != "" && maxDiscount != "" {
+			if _,err := strconv.ParseInt(minDiscount,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			if _,err := strconv.ParseInt(maxDiscount,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"(discount BETWEEN ? and ?)")
+			args = append(args, minDiscount,maxDiscount)
+		}else if minDiscount != "" {
+			if _,err := strconv.ParseInt(minDiscount,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"discount >= ?")
+			args = append(args, minDiscount)
+		}else if maxDiscount != "" {
+			if _,err := strconv.ParseInt(maxDiscount,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"discount <= ?")
+			args = append(args, maxDiscount)
+		}
+
+		if limit == "" {
+			lmt = 10
+		}else {
+			if lm,err := strconv.ParseInt(limit,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}else {
+				lmt = int(lm)
+			}
+		}
+
+		if page == "" {
+			pg = 1
+		}else {
+			if p,err := strconv.ParseInt(page,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				dataCh <- nil
+				return
+			}else {
+				pg = int(p)
+			}
+		}
+
+		if err := getDb().Model(m.Item{}).Where(query,args...).Offset((pg - 1) * lmt).Limit(lmt).Find(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				errCh <- errors.New("Data not found")
 				dataCh <- []m.Item{}
@@ -480,7 +673,21 @@ func GetItemByStoreId(c *gin.Context){
 
 		errCh <- nil
 		dataCh <- data
-	}(storeId)
+	}(
+		storeId,
+		name,
+		minDate,
+		maxDate,
+		minStock,
+		maxStock,
+		status,
+		minPrice,
+		maxPrice,
+		minDiscount,
+		maxDiscount,
+		limit,
+		page,
+	)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
