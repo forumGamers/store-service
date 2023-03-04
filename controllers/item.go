@@ -659,7 +659,7 @@ func GetItemByStoreId(c *gin.Context){
 			}
 		}
 
-		if err := getDb().Model(m.Item{}).Where(query,args...).Offset((pg - 1) * lmt).Limit(lmt).Find(&data).Error ; err != nil {
+		if err := getDb().Model(m.Item{}).Where(query,args...).Preload("Store").Offset((pg - 1) * lmt).Limit(lmt).Find(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				errCh <- errors.New("Data not found")
 				dataCh <- []m.Item{}
@@ -696,4 +696,56 @@ func GetItemByStoreId(c *gin.Context){
 	items := <- dataCh
 
 	c.JSON(http.StatusOK,items)
+}
+
+func UpdateItemDesc(c *gin.Context){
+	id := c.Request.Header.Get("id")
+	storeId := c.Request.Header.Get("storeId")
+	itemId := c.Param("id")
+
+	if id == "" {
+		panic("Forbidden")
+	}
+
+	desc := c.PostForm("description")
+
+	if desc == "" {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	Id,r := strconv.ParseInt(id,10,64)
+
+	if r != nil {
+		panic("Forbidden")
+	}
+
+	go func(id int,storeId string,itemId string,desc string){
+		var data m.Item
+		if err := getDb().Where("store_id = ? and id = ?",storeId,itemId).Preload("Store").First(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		if data.Store.Owner_id != id {
+			errCh <- errors.New("Forbidden")
+			return
+		}
+
+		data.Description = desc
+
+		if err := getDb().Model(m.Item{}).Save(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id),storeId,itemId,desc)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
 }
