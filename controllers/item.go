@@ -749,3 +749,55 @@ func UpdateItemDesc(c *gin.Context){
 
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
 }
+
+func UpdateItemName(c *gin.Context){
+	id := c.Request.Header.Get("id")
+	storeId := c.Request.Header.Get("storeId")
+	itemId := c.Param("id")
+
+	if id == "" {
+		panic("Forbidden")
+	}
+
+	name := c.PostForm("description")
+
+	if name == "" {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	Id,r := strconv.ParseInt(id,10,64)
+
+	if r != nil {
+		panic("Forbidden")
+	}
+
+	go func(id int,storeId string,itemId string,name string){
+		var data m.Item
+		if err := getDb().Where("store_id = ? and id = ?",storeId,itemId).Preload("Store").First(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		if data.Store.Owner_id != id {
+			errCh <- errors.New("Forbidden")
+			return
+		}
+
+		data.Name = name
+
+		if err := getDb().Model(m.Item{}).Save(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id),storeId,itemId,name)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
+}
