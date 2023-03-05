@@ -913,7 +913,7 @@ func UpdatePrice(c *gin.Context){
 }
 
 func UpdateName(c *gin.Context){
-	storeId := c.Param("storeId")
+	storeId := c.Request.Header.Get("storeId")
 	id := c.Param("id")
 	user := c.Request.Header.Get("id")
 
@@ -949,12 +949,12 @@ func UpdateName(c *gin.Context){
 
 		itemCh := make(chan m.Item)
 
-		go func (user string,id string) {
+		go func (id string) {
 			var data m.Item
 			getDb().Model(m.Item{}).Where("id = ?",id).Preload("Store").First(&data)
 
 			itemCh <- data
-		}(user,id)
+		}(id)
 
 		if item = <- itemCh ; item.Store.Owner_id != int(Id) {
 			panic("Forbidden")
@@ -971,6 +971,61 @@ func UpdateName(c *gin.Context){
 		}
 		errCh <- nil
 	}(id,name,slug)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func UpdateItemDiscount(c *gin.Context){
+	itemId := c.Param("id")
+
+	user := c.Request.Header.Get("id")
+	storeId := c.Request.Header.Get("storeId")
+
+	discount := c.PostForm("discount")
+
+	disc,er := strconv.ParseInt(discount,10,64) 
+
+	if er != nil {
+		panic("Invalid data")
+	}
+
+	if user == "" {
+		panic("Forbidden")
+	}
+
+	Id,r := strconv.ParseInt(user,10,64)
+
+	if r != nil {
+		panic("Forbidden")
+	}
+
+	errCh := make(chan error)
+
+	go func(id int,storeId string,itemId string,discount int){
+		var data m.Item
+		if err := getDb().Where("store_id = ? and id = ?",storeId,itemId).Preload("Store").First(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		if data.Store.Owner_id != id {
+			errCh <- errors.New("Forbidden")
+			return
+		}
+
+		data.Discount = discount
+
+		if err := getDb().Model(m.Item{}).Save(&data).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id),storeId,itemId,int(disc))
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
