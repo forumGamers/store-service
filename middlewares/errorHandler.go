@@ -26,6 +26,9 @@ func ErrorHandler(c *gin.Context) {
 		case "Forbidden":
 			s = http.StatusForbidden
 			break
+		case "Invalid params" :
+			s = http.StatusBadRequest
+			break
 		case "Invalid data":
 			s = http.StatusBadRequest
 			break

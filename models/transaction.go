@@ -15,4 +15,14 @@ type Transaction struct {
 	Store_id			uint		`json:"Store_id"`
 	Store				Store		`gorm:";foreignKey:store_id;references:id"`
 	Item				Item		`gorm:";foreignKey:item_id;references:id"`
+	Status				string		`json:"status"`
+	Value				int			`json:"value"`
+	Amount				int			`json:"amount"`
+	MessageForSeller	string		`json:"message"`
+	Fee					int			`json:"fee"`
+}
+
+func (t *Transaction) BeforeCreate(tx *g.DB) error {
+	t.Status = "On Process"
+	return nil
 }
