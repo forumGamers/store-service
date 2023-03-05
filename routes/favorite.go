@@ -12,4 +12,6 @@ func (r routes) favoriteRoutes(rg *gin.RouterGroup){
 	uri.GET("/",c.GetMyFavorite)
 
 	uri.POST("/:itemId",c.AddFavorite)
+
+	uri.DELETE("/:id",c.RemoveFavorite)
 }

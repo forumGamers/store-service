@@ -134,3 +134,34 @@ func GetMyFavorite(c *gin.Context){
 
 	c.JSON(http.StatusOK,favorite)
 }
+
+func RemoveFavorite(c *gin.Context){
+	favorite := c.Param("id")
+	user := c.Request.Header.Get("id")
+
+	if user == "" {
+		panic("Forbidden")
+	}
+
+	id,er := strconv.ParseInt(favorite,10,64)
+
+	if er != nil {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	go func(id int,userId string){
+		if err := getDb().Model(m.Favorite{}).Where("user_id = ?",userId).Delete(m.Favorite{},id).Error ; err != nil {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}(int(id),user)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusOK,gin.H{"message":"success"})
+}
