@@ -14,6 +14,8 @@ type Item struct {
 	Price			int				`json:"price"`
 	Description		string			`json:"description"`
 	Discount		int				`json:"discount"`
+	Sold			int				`json:"sold"`
+	Active			bool			`json:"active"`
 	Ratings 		[]ItemRating	`gorm:";foreignKey:item_id;references:id"`
 	Store			Store			`gorm:";foreignKey:store_id;references:id"`	
 }
@@ -24,5 +26,8 @@ func (i *Item) BeforeCreate(tx *g.DB) error {
 	}else {
 		i.Status = "Not Available"
 	}
+
+	i.Active = true
+	i.Sold = 0
 	return nil
 }
