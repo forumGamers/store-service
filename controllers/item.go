@@ -20,7 +20,7 @@ import (
 
 
 func CreateItem(c *gin.Context){
-	id := c.Request.Header.Get("id")
+	id := c.Param("storeId")
 	var item m.Item
 
 	name,stock,price,description,discount := 
@@ -36,7 +36,7 @@ func CreateItem(c *gin.Context){
 		checkCh := make(chan error)
 		go func(name string,id string){
 			var data m.Item
-			if err := getDb().Where("name = ? and owner_id = ?",name,id).First(&data).Error ; err != nil {
+			if err := getDb().Model(m.Item{}).Where("name = ? and store_id = ?",name,id).First(&data).Error ; err != nil {
 				if err == gorm.ErrRecordNotFound {
 					checkCh <- nil
 					return
@@ -751,58 +751,6 @@ func UpdateItemDesc(c *gin.Context){
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
 }
 
-func UpdateItemName(c *gin.Context){
-	id := c.Request.Header.Get("id")
-	storeId := c.Request.Header.Get("storeId")
-	itemId := c.Param("id")
-
-	if id == "" {
-		panic("Forbidden")
-	}
-
-	name := c.PostForm("description")
-
-	if name == "" {
-		panic("Invalid data")
-	}
-
-	errCh := make(chan error)
-
-	Id,r := strconv.ParseInt(id,10,64)
-
-	if r != nil {
-		panic("Forbidden")
-	}
-
-	go func(id int,storeId string,itemId string,name string){
-		var data m.Item
-		if err := getDb().Where("store_id = ? and id = ?",storeId,itemId).Preload("Store").First(&data).Error ; err != nil {
-			errCh <- errors.New(err.Error())
-			return
-		}
-
-		if data.Store.Owner_id != id {
-			errCh <- errors.New("Forbidden")
-			return
-		}
-
-		data.Name = name
-
-		if err := getDb().Model(m.Item{}).Save(&data).Error ; err != nil {
-			errCh <- errors.New(err.Error())
-			return
-		}
-
-		errCh <- nil
-	}(int(Id),storeId,itemId,name)
-
-	if err := <- errCh ; err != nil {
-		panic(err.Error())
-	}
-
-	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
-}
-
 func UpdateItemImage(c *gin.Context){
 	var item m.Item
 
@@ -962,4 +910,71 @@ func UpdatePrice(c *gin.Context){
 	}
 
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
+}
+
+func UpdateName(c *gin.Context){
+	storeId := c.Param("storeId")
+	id := c.Param("id")
+	user := c.Request.Header.Get("id")
+
+	Id,r := strconv.ParseInt(user,10,64)
+
+	if r != nil {
+		panic("Forbidden")
+	}
+
+	name := c.PostForm("name")
+	var item m.Item
+
+	if name == "" {
+		panic("Invalid data")
+	}else {
+		checkCh := make(chan error)
+
+		go func(name string,storeId string){
+			var data m.Item
+			if err := getDb().Model(m.Item{}).Where("name = ? and store_id = ?",name,storeId).Preload("Store").First(&data).Error ; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					checkCh <- nil
+					return
+				}
+			}
+
+			checkCh <- errors.New("Conflict")
+		}(name,storeId)
+
+		if err := <- checkCh ; err != nil {
+			panic(err.Error())
+		}
+
+		itemCh := make(chan m.Item)
+
+		go func (user string,id string) {
+			var data m.Item
+			getDb().Model(m.Item{}).Where("id = ?",id).Preload("Store").First(&data)
+
+			itemCh <- data
+		}(user,id)
+
+		if item = <- itemCh ; item.Store.Owner_id != int(Id) {
+			panic("Forbidden")
+		}
+	}
+
+	errCh := make(chan error)
+	slug := h.SlugGenerator(name+" by "+item.Store.Name)
+
+	go func (id string,name string,slug string)  {
+		if err := getDb().Model(m.Item{}).Where("id = ?",id).Update(m.Item{Name: name,Slug: slug}).Error ; err != nil {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}(id,name,slug)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
