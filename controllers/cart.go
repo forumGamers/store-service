@@ -135,3 +135,34 @@ func GetCart(c *gin.Context){
 
 	c.JSON(http.StatusOK,cart)
 }
+
+func RemoveCart(c *gin.Context){
+	cart := c.Param("id")
+	user := c.Request.Header.Get("id")
+
+	if user == "" {
+		panic("Forbidden")
+	}
+
+	id,er := strconv.ParseInt(cart,10,64)
+
+	if er != nil {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	go func(id int,userId string){
+		if err := getDb().Model(m.Cart{}).Where("user_id = ?",userId).Delete(m.Cart{},id).Error ; err != nil {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}(int(id),user)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusOK,gin.H{"message":"success"})
+}

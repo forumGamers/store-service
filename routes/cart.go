@@ -11,4 +11,6 @@ func (r routes) cartRoutes(rg *gin.RouterGroup){
 	uri.POST("/:itemId",c.AddCart)
 
 	uri.GET("/",c.GetCart)
+
+	uri.DELETE("/:id",c.RemoveCart)
 }
