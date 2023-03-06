@@ -8,5 +8,12 @@ type Voucher struct {
 	Discount	int			`json:"discount"`
 	Cashback	int			`json:"cashback"`
 	Store_id	int			`json:"store_id"`
+	Period		int			`json:"period"`
+	Status		string		`json:"status"`
 	Store		Store
+}
+
+func (v *Voucher) BeforeCreate(tx *g.DB) error {
+	v.Status = "Active"
+	return nil
 }

@@ -29,6 +29,9 @@ func ErrorHandler(c *gin.Context) {
 		case "Invalid params" :
 			s = http.StatusBadRequest
 			break
+		case "You have not store yet" : 
+			s = http.StatusBadRequest
+			break
 		case "Invalid data":
 			s = http.StatusBadRequest
 			break
