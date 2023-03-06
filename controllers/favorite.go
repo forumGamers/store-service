@@ -29,15 +29,16 @@ func AddFavorite(c *gin.Context){
 	errCh := make(chan error)
 
 	go func(itemId int){
-		if err := getDb().Model(m.Item{}).Where("id = ?",itemId).Error ; err != nil {
+		if err := getDb().Model(m.Item{}).Where("item_id = ?",itemId).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				errCh <- errors.New("Data not found")
+				errCh <- nil
 				return
 			}else {
 				errCh <- err
+				return
 			}
 		}
-		errCh <- nil
+		errCh <- errors.New("Conflict")
 	}(int(item))
 
 	if err := <- errCh ; err != nil {

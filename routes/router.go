@@ -35,5 +35,13 @@ func Routes(){
 
 	r.itemRoutes(groupRoutes)
 
+	r.followerRoutes(groupRoutes)
+
+	r.favoriteRoutes(groupRoutes)
+
+	r.transactionRoutes(groupRoutes)
+
+	r.cartRoutes(groupRoutes)
+
 	r.router.Run(":4000")
 }
