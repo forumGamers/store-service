@@ -9,4 +9,6 @@ func (r routes) cartRoutes(rg *gin.RouterGroup){
 	uri := rg.Group("/cart")
 
 	uri.POST("/:itemId",c.AddCart)
+
+	uri.GET("/",c.GetCart)
 }
