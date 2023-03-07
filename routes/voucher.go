@@ -10,5 +10,5 @@ func (r routes) voucherRoutes(rg *gin.RouterGroup){
 
 	uri.POST("/",c.AddVoucher)
 
-	uri.GET("/",c.GetAll)
+	uri.GET("/",c.GetAllVoucher)
 }
