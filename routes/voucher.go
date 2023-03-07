@@ -9,4 +9,6 @@ func (r routes) voucherRoutes(rg *gin.RouterGroup){
 	uri := rg.Group("/voucher")
 
 	uri.POST("/",c.AddVoucher)
+
+	uri.GET("/",c.GetAll)
 }

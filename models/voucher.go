@@ -10,6 +10,7 @@ type Voucher struct {
 	Store_id	int			`json:"store_id"`
 	Period		int			`json:"period"`
 	Status		string		`json:"status"`
+	Stock		int			`json:"stock"`
 	Store		Store
 }
 
