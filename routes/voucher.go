@@ -11,4 +11,6 @@ func (r routes) voucherRoutes(rg *gin.RouterGroup){
 	uri.POST("/",c.AddVoucher)
 
 	uri.GET("/",c.GetAllVoucher)
+
+	uri.GET("/:id",c.GetVoucherById)
 }

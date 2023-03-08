@@ -185,3 +185,36 @@ func GetAllVoucher(c *gin.Context){
 
 	c.JSON(http.StatusOK,data)
 }
+
+func GetVoucherById(c *gin.Context){
+	id := c.Param("id")
+
+	errCh := make(chan error)
+	dataCh := make(chan m.Voucher)
+
+	go func(id string){
+		var data m.Voucher
+		if err := getDb().Model(m.Voucher{}).Where("id = ?",id).First(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				dataCh <- m.Voucher{}
+				return
+			}else {
+				errCh <- err
+				dataCh <- m.Voucher{}
+				return
+			}
+		}
+
+		dataCh <- data
+		errCh <- nil
+	}(id)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	data := <- dataCh
+
+	c.JSON(http.StatusOK,data)
+}

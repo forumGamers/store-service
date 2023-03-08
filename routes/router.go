@@ -43,5 +43,7 @@ func Routes(){
 
 	r.cartRoutes(groupRoutes)
 
+	r.voucherRoutes(groupRoutes)
+
 	r.router.Run(":4000")
 }
