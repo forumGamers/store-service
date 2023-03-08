@@ -218,3 +218,54 @@ func GetVoucherById(c *gin.Context){
 
 	c.JSON(http.StatusOK,data)
 }
+
+func DeleteVoucher(c *gin.Context){
+	storeId := c.Request.Header.Get("store")
+	id := c.Request.Header.Get("id")
+	voucherId := c.Param("id")
+
+	store,r := strconv.ParseInt(storeId,10,64)
+
+	if r != nil {
+		panic("Forbidden")
+	}
+
+	Id , er := strconv.ParseInt(id,10,64)
+
+	if er != nil {
+		panic("Forbidden")
+	}
+
+	errCh := make(chan error)
+
+	go func (id int,voucher string,storeId int)  {
+		var data m.Voucher
+		if err := getDb().Model(m.Voucher{}).Where("id = ?",voucher).First(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				return
+			}else {
+				errCh <- err
+				return
+			}
+		}
+
+		if data.Store_id != storeId || data.Store.Owner_id != id {
+			errCh <- errors.New("Forbidden")
+			return
+		}
+
+		if err := getDb().Model(m.Voucher{}).Delete(m.Voucher{},voucher).Error ; err != nil {
+			errCh <- err
+			return
+		}
+
+		errCh <- nil
+	}(int(Id),voucherId,int(store))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusOK,gin.H{"message":"success"})
+}

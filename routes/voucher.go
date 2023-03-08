@@ -13,4 +13,6 @@ func (r routes) voucherRoutes(rg *gin.RouterGroup){
 	uri.GET("/",c.GetAllVoucher)
 
 	uri.GET("/:id",c.GetVoucherById)
+
+	uri.DELETE("/:id",c.DeleteVoucher)
 }
