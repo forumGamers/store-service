@@ -80,10 +80,8 @@ func CreateTransaction(c *gin.Context){
 			}
 
 			item := <- itemCh
-			fmt.Println(item.Price)
 
 			tx := getDb().Begin()
-			var amounts int
 
 			transaction.Item_id = item.ID
 
@@ -95,12 +93,6 @@ func CreateTransaction(c *gin.Context){
 			}else {
 				transaction.User_id = uint(userId)
 				transaction.Amount = amounts
-
-				if err := getDb().Model(m.Store{}).Where("id = ?",store.ID).Update("exp",(store.Exp + s.TransactionExpForStore(transaction.Value,&v))).Error ; err != nil {
-					errCh <- err
-					tx.Rollback()
-					return
-				}
 			}
 
 			if err := <- voucherCheck ; err != nil && err.Error() != "skip" {
@@ -131,7 +123,13 @@ func CreateTransaction(c *gin.Context){
 				return
 			}
 
-			if err := getDb().Model(m.Item{}).Where("id = ?",item.ID).Update(map[string]interface{}{"stock":item.Stock - amounts,"sold":item.Sold + 1}).Error ; err != nil {
+			if err := getDb().Model(m.Store{}).Where("id = ?",store.ID).Update("exp",store.Exp + s.TransactionExpForStore(transaction.Value,&v)).Error ; err != nil {
+				errCh <- err
+				tx.Rollback()
+				return
+			}
+
+			if err := getDb().Model(m.Item{}).Where("id = ?",item.ID).Update(map[string]interface{}{"stock":item.Stock - transaction.Amount,"sold":item.Sold + 1}).Error ; err != nil {
 				errCh <- err
 				tx.Rollback()
 				return
