@@ -49,6 +49,10 @@ func ErrorHandler(c *gin.Context) {
 			break
 		case "Bad Gateway" :
 			s = http.StatusBadGateway
+			break
+		case "Unauthorize" :
+			s = http.StatusUnauthorized
+			break
 		default :
 			fmt.Println(msg)
 			msg = "Internal Server Error"

@@ -95,6 +95,10 @@ func CreateTransaction(c *gin.Context){
 				errCh <- err
 				return
 			}else {
+				if store.Owner_id == userId {
+					errCh <- errors.New("Unauthorize")
+					return
+				}
 				transaction.User_id = uint(userId)
 				transaction.Amount = amounts
 			}
