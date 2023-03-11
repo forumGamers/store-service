@@ -26,3 +26,7 @@ func VoucherPointForStore(voucher *m.Voucher) int{
 func VoucherPointForUser(voucher *m.Voucher) int {
 	return voucher.PointForUser
 }
+
+func TransactionExpForUser(value int,voucher *m.Voucher) int {
+	return int(math.Ceil(0.01 * float64(value) + float64( VoucherPointForUser(voucher))))
+}

@@ -8,6 +8,7 @@ import (
 
 	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
+	s "github.com/forumGamers/store-service/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
@@ -25,7 +26,13 @@ func AddVoucher(c *gin.Context){
 		panic("Forbidden")
 	}
 
-	go func(id int,storeId string) {
+	sId,er := strconv.ParseInt(storeId,10,64)
+
+	if er != nil {
+		panic("Forbidden")
+	}
+
+	go func(id int,storeId int) {
 		var data m.Store
 		if err := getDb().Model(m.Voucher{}).Where("id = ? and owner_id = ?",storeId,id).First(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
@@ -43,7 +50,7 @@ func AddVoucher(c *gin.Context){
 		}
 
 		checkCh <- nil
-	}(int(Id),storeId)
+	}(int(Id),int(sId))
 
 	if err := <- checkCh ; err != nil {
 		panic(err.Error())
@@ -95,6 +102,8 @@ func AddVoucher(c *gin.Context){
 		data.Period = int(p)
 		data.Store_id = int(id)
 		data.Stock = int(stck)
+		data.PointForStore = s.ExpForStore(int(disc),int(cb),int(p))
+		data.PointForUser = s.ExpForUser(int(disc),int(cb),int(p))
 
 		if err := getDb().Model(m.Voucher{}).Create(&data).Error ; err != nil {
 			errCh <- err

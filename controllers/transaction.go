@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
+	i "github.com/forumGamers/store-service/interfaces"
 	m "github.com/forumGamers/store-service/models"
 	s "github.com/forumGamers/store-service/services"
 	validate "github.com/forumGamers/store-service/validations"
@@ -48,6 +48,8 @@ func CreateTransaction(c *gin.Context){
 	errCh := make(chan error)
 	voucherCh := make(chan m.Voucher)
 	voucherCheck := make(chan error)
+	responseCh := make(chan i.SuccessTransaction)
+
 
 	go s.CheckAvailablity(itemId,amount,checkCh,itemCh)
 
@@ -66,6 +68,7 @@ func CreateTransaction(c *gin.Context){
 		){
 			var transaction m.Transaction
 			var v m.Voucher
+			var response i.SuccessTransaction
 
 			if err := <- storeCheck ;  err != nil {
 				errCh <- err
@@ -96,7 +99,6 @@ func CreateTransaction(c *gin.Context){
 			}
 
 			if err := <- voucherCheck ; err != nil && err.Error() != "skip" {
-				v = <- voucherCh
 
 				test := s.VoucherCheck(v,store.ID)
 
@@ -105,11 +107,16 @@ func CreateTransaction(c *gin.Context){
 					return
 				}
 
-				transaction.Value = transaction.Amount * item.Price - v.Discount
-				fmt.Println(transaction.Value,"disc")
-			}else {
 				transaction.Value = transaction.Amount * item.Price
-				fmt.Println(transaction.Value)
+				response.Discount = 0
+				response.TotalPayment = transaction.Amount * item.Price
+				response.Voucher = false
+			}else {
+				v = <- voucherCh
+				transaction.Value = transaction.Amount * item.Price 
+				response.Discount = v.Discount
+				response.TotalPayment = transaction.Amount * item.Price - v.Discount
+				response.Voucher = true
 			}
 
 			transaction.Payment_method = payment_method
@@ -123,19 +130,23 @@ func CreateTransaction(c *gin.Context){
 				return
 			}
 
+			response.TransactionId = int(transaction.ID)
+			response.ExpForUser = s.TransactionExpForUser(transaction.Value,&v)
+
 			if err := getDb().Model(m.Store{}).Where("id = ?",store.ID).Update("exp",store.Exp + s.TransactionExpForStore(transaction.Value,&v)).Error ; err != nil {
 				errCh <- err
 				tx.Rollback()
 				return
 			}
 
-			if err := getDb().Model(m.Item{}).Where("id = ?",item.ID).Update(map[string]interface{}{"stock":item.Stock - transaction.Amount,"sold":item.Sold + 1}).Error ; err != nil {
+			if err := getDb().Model(m.Item{}).Where("id = ?",item.ID).Update(map[string]interface{}{"stock":item.Stock - transaction.Amount,"sold":item.Sold + transaction.Amount}).Error ; err != nil {
 				errCh <- err
 				tx.Rollback()
 				return
 			}
 
 			errCh <- nil
+			responseCh <- response
 			tx.Commit()
 	}(
 		itemId,
@@ -151,6 +162,8 @@ func CreateTransaction(c *gin.Context){
 		panic(err.Error())
 	}
 
-	c.JSON(http.StatusCreated,gin.H{"message" : "success"})
+	response := <- responseCh
+
+	c.JSON(http.StatusCreated,response)
 
 }

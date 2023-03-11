@@ -32,3 +32,11 @@ func GetVoucher(id int,dataCh chan m.Voucher,errCh chan error) {
 	errCh <- nil
 	dataCh <- data
 }
+
+func ExpForStore(discount int,cashback int,stock int) int {
+	return int((discount + cashback ) / stock)
+}
+
+func ExpForUser(discount int,cashback int,stock int) int {
+	return (discount + cashback) / stock
+}
