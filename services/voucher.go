@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
@@ -39,4 +40,12 @@ func ExpForStore(discount int,cashback int,stock int) int {
 
 func ExpForUser(discount int,cashback int,stock int) int {
 	return (discount + cashback) / stock
+}
+
+func DecrementVoucherPeriod(){
+	if err := l.GetDb().Model(m.Voucher{}).Where("period > ?",0).Updates(map[string]interface{}{
+		"period":gorm.Expr("period - 1"),
+		}).Error ; err != nil {
+			fmt.Println(err.Error())
+	}
 }
