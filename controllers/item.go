@@ -170,8 +170,10 @@ func CreateItem(c *gin.Context){
 		panic(err.Error())
 	}
 
-	if err := os.Remove("uploads/"+img) ; err != nil {
-		fmt.Println(err)
+	if img != "" {
+		if err := os.Remove("uploads/"+img) ; err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	c.JSON(http.StatusCreated,gin.H{"message" : "success"})

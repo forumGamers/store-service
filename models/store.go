@@ -25,5 +25,6 @@ type Store struct {
 func (s *Store) BeforeCreate(tx *g.DB) (err error){
 	s.Active = true
 	s.Exp = 0
+	s.Status_id = 1
 	return nil
 }

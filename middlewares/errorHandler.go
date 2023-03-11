@@ -35,6 +35,12 @@ func ErrorHandler(c *gin.Context) {
 		case "Invalid data":
 			s = http.StatusBadRequest
 			break
+		case "Stock is not enough" :
+			s = http.StatusBadRequest
+			break
+		case "voucher is not registered" :
+			s = http.StatusBadRequest
+			break
 		case "name is already use" :
 			s = http.StatusConflict
 			break

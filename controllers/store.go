@@ -181,6 +181,8 @@ func CreateStore(c *gin.Context){
 
 	store.Owner_id = int(id)
 
+	store.Status_id = 1
+
 	err := make(chan error)
 
 	go func () {
@@ -193,11 +195,15 @@ func CreateStore(c *gin.Context){
 	}()
 
 	if <- err == nil {
-		if err := os.Remove("uploads/"+img) ; err != nil {
-			fmt.Println(err)
+		if img != "" {
+			if err := os.Remove("uploads/"+img) ; err != nil {
+				fmt.Println(err)
+			}
 		}
-		if err := os.Remove("uploads/"+bgImg) ; err != nil {
-			fmt.Println(err)
+		if bgImg != "" {
+			if err := os.Remove("uploads/"+bgImg) ; err != nil {
+				fmt.Println(err)
+			}
 		}
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
