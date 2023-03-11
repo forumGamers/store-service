@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -79,6 +80,7 @@ func CreateTransaction(c *gin.Context){
 			}
 
 			item := <- itemCh
+			fmt.Println(item.Price)
 
 			tx := getDb().Begin()
 			var amounts int
@@ -86,21 +88,6 @@ func CreateTransaction(c *gin.Context){
 			transaction.Item_id = item.ID
 
 			transaction.Store_id = store.ID
-
-			if err := <- voucherCheck ; err != nil && err.Error() != "skip" {
-				v = <- voucherCh
-
-				test := s.VoucherCheck(v,store.ID)
-
-				if !test {
-					errCh <- errors.New("voucher is not registered")
-					return
-				}
-
-				transaction.Value = transaction.Amount * item.Price - v.Discount
-			}else {
-				transaction.Value = transaction.Amount * item.Price
-			}
 
 			if userId,amounts,err := validate.CheckDataTransaction(id,amount) ; err != nil {
 				errCh <- err
@@ -114,6 +101,23 @@ func CreateTransaction(c *gin.Context){
 					tx.Rollback()
 					return
 				}
+			}
+
+			if err := <- voucherCheck ; err != nil && err.Error() != "skip" {
+				v = <- voucherCh
+
+				test := s.VoucherCheck(v,store.ID)
+
+				if !test {
+					errCh <- errors.New("voucher is not registered")
+					return
+				}
+
+				transaction.Value = transaction.Amount * item.Price - v.Discount
+				fmt.Println(transaction.Value,"disc")
+			}else {
+				transaction.Value = transaction.Amount * item.Price
+				fmt.Println(transaction.Value)
 			}
 
 			transaction.Payment_method = payment_method
