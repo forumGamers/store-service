@@ -13,5 +13,5 @@ func (r routes) transactionRoutes(rg *gin.RouterGroup){
 
 	uri.PATCH("/:transactionId",c.EndTransaction)
 
-	// uri.PATCH("/cancel/:transactionId")
+	uri.PATCH("/cancel/:transactionId",c.CancelTransaction)
 }

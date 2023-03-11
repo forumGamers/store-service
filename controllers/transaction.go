@@ -10,7 +10,6 @@ import (
 	s "github.com/forumGamers/store-service/services"
 	validate "github.com/forumGamers/store-service/validations"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 func CreateTransaction(c *gin.Context){
@@ -185,35 +184,13 @@ func EndTransaction(c *gin.Context){
 	Id,tId,err := validate.CheckEndTransactionData(id,transactionId)
 
 	if err != nil {
-		panic(err.Error())
+		panic("Invalid data")
 	}
 
 	checkCh := make (chan error)
 	dataCh := make(chan m.Transaction)
 
-	go func(id int,transactionId int) {
-		var data m.Transaction
-
-		if err := getDb().Model(m.Transaction{}).Where("id = ?",transactionId).First(&data).Error ; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				checkCh <- errors.New("Data not found")
-				dataCh <- m.Transaction{}
-				return
-			}else {
-				checkCh <- err
-				dataCh <- m.Transaction{}
-				return
-			}
-		}
-
-		if data.User_id != uint(id) {
-			checkCh <- errors.New("Forbidden")
-			return
-		}
-
-		checkCh <- nil
-		dataCh <- data
-	}(Id,tId)
+	go s.AuthorizeTransaction(Id,tId,checkCh,dataCh)
 
 	errCh := make(chan error)
 
@@ -226,6 +203,46 @@ func EndTransaction(c *gin.Context){
 		transaction := <- dataCh
 
 		if err := getDb().Model(m.Transaction{}).Where("id = ?",transaction.ID).Update("status","Finish").Error ; err != nil {
+			errCh <- err
+			return
+		}
+
+		errCh <- nil
+	}()
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func CancelTransaction(c *gin.Context){
+	transactionId := c.Param("transactionId")
+	id := c.Request.Header.Get("id")
+
+	Id,tId,err := validate.CheckEndTransactionData(id,transactionId)
+
+	if err != nil {
+		panic("Invalid data")
+	}
+
+	checkCh := make (chan error)
+	dataCh := make(chan m.Transaction)
+
+	go s.AuthorizeTransaction(Id,tId,checkCh,dataCh)
+
+	errCh := make(chan error)
+
+	go func(){
+		if err := <- checkCh ; err != nil {
+			errCh <- err
+			return
+		}
+
+		transaction := <- dataCh
+
+		if err := getDb().Model(m.Transaction{}).Where("id = ?",transaction.ID).Update("status","Cancel").Error ; err != nil {
 			errCh <- err
 			return
 		}

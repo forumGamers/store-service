@@ -11,4 +11,6 @@ func main(){
 	r.Routes()
 
 	//buat cron untuk ngurangi tanggal voucher
+
+	//buat cron untuk otomatis batalin transaksi yang udh lbh 24jam
 }
