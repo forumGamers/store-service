@@ -9,4 +9,6 @@ func main(){
 	c.Connection()
 
 	r.Routes()
+
+	//buat cron untuk ngurangi tanggal voucher
 }

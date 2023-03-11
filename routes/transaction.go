@@ -10,4 +10,8 @@ func (r routes) transactionRoutes(rg *gin.RouterGroup){
 	uri := rg.Group("/transaction")
 
 	uri.POST("/:storeId/:itemId",c.CreateTransaction)
+
+	uri.PATCH("/:transactionId",c.EndTransaction)
+
+	// uri.PATCH("/cancel/:transactionId")
 }

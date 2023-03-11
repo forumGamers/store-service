@@ -10,6 +10,7 @@ import (
 	s "github.com/forumGamers/store-service/services"
 	validate "github.com/forumGamers/store-service/validations"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 func CreateTransaction(c *gin.Context){
@@ -98,14 +99,7 @@ func CreateTransaction(c *gin.Context){
 				transaction.Amount = amounts
 			}
 
-			if err := <- voucherCheck ; err != nil && err.Error() != "skip" {
-
-				test := s.VoucherCheck(v,store.ID)
-
-				if !test {
-					errCh <- errors.New("voucher is not registered")
-					return
-				}
+			if err := <- voucherCheck ; err != nil || err.Error() != "skip" {
 
 				transaction.Value = transaction.Amount * item.Price
 				response.Discount = 0
@@ -113,10 +107,23 @@ func CreateTransaction(c *gin.Context){
 				response.Voucher = false
 			}else {
 				v = <- voucherCh
+				test := s.VoucherCheck(v,store.ID)
+
+				if !test {
+					errCh <- errors.New("voucher is not registered")
+					return
+				}
+
 				transaction.Value = transaction.Amount * item.Price 
 				response.Discount = v.Discount
 				response.TotalPayment = transaction.Amount * item.Price - v.Discount
 				response.Voucher = true
+
+				if err := getDb().Model(m.Voucher{}).Where("id = ?",v.ID).Update("stock",v.Stock - 1).Error ; err != nil {
+					errCh <- err
+					tx.Rollback()
+					return
+				}
 			}
 
 			transaction.Payment_method = payment_method
@@ -165,5 +172,66 @@ func CreateTransaction(c *gin.Context){
 	response := <- responseCh
 
 	c.JSON(http.StatusCreated,response)
+}
 
+func EndTransaction(c *gin.Context){
+	transactionId := c.Param("transactionId")
+	id := c.Request.Header.Get("id")
+
+	Id,tId,err := validate.CheckEndTransactionData(id,transactionId)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	checkCh := make (chan error)
+	dataCh := make(chan m.Transaction)
+
+	go func(id int,transactionId int) {
+		var data m.Transaction
+
+		if err := getDb().Model(m.Transaction{}).Where("id = ?",transactionId).First(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				checkCh <- errors.New("Data not found")
+				dataCh <- m.Transaction{}
+				return
+			}else {
+				checkCh <- err
+				dataCh <- m.Transaction{}
+				return
+			}
+		}
+
+		if data.User_id != uint(id) {
+			checkCh <- errors.New("Forbidden")
+			return
+		}
+
+		checkCh <- nil
+		dataCh <- data
+	}(Id,tId)
+
+	errCh := make(chan error)
+
+	go func ()  {
+		if err := <- checkCh ; err != nil {
+			errCh <- err
+			return
+		}
+
+		transaction := <- dataCh
+
+		if err := getDb().Model(m.Transaction{}).Where("id = ?",transaction.ID).Update("status","Finish").Error ; err != nil {
+			errCh <- err
+			return
+		}
+
+		errCh <- nil
+	}()
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
