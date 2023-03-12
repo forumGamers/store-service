@@ -2,11 +2,13 @@ package routes
 
 import (
 	"net/http"
+	"os"
 
 	md "github.com/forumGamers/store-service/middlewares"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/logger"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 type routes struct {
@@ -14,6 +16,11 @@ type routes struct {
 }
 
 func Routes(){
+
+	if err := godotenv.Load() ; err != nil {
+		panic(err.Error())
+	}
+
 	r := routes { router: gin.Default() }
 
 	r.router.Use(cors.Default())
@@ -45,5 +52,11 @@ func Routes(){
 
 	r.voucherRoutes(groupRoutes)
 
-	r.router.Run(":4000")
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "4000"
+	}
+
+	r.router.Run(":"+port)
 }
