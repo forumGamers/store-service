@@ -21,7 +21,18 @@ func Connection(){
 
 	fmt.Println("connection success")
 
-	database.AutoMigrate(&m.StoreStatus{},&m.Experience{},&m.StoreRating{},&m.ItemRating{},&m.Store{},&m.Item{},&m.Transaction{})
+	database.AutoMigrate(
+		&m.StoreStatus{},
+		&m.Follower{},
+		&m.Cart{},
+		&m.Favorite{},
+		&m.Voucher{},
+		&m.StoreRating{},
+		&m.ItemRating{},
+		&m.Store{},
+		&m.Item{},
+		&m.Transaction{},
+	)
 
 	h.SetFK(database)
 

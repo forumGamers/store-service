@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
 
+	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
 )
@@ -33,59 +36,173 @@ func CreateStoreStatus(c *gin.Context){
 
 	store_status.Maker_id = int(id)
 
-	err := make(chan bool)
+	err := make(chan error)
 
 	go func (){
 		res := getDb().Create(&store_status)
 
 		if res.Error != nil {
-			err <- true
+			err <- res.Error
 		}else {
-			err <- false
+			err <- nil
 		}
 	}()
 
-	if <- err == false {
+	if <- err == nil {
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {
-		c.JSON(http.StatusInternalServerError,gin.H{"message" : "Internal Server Error"})
-		return
+		panic(<- err)
 	}
 }
 
 func GetAllStoreStatus(c *gin.Context){
-	var store_status []m.StoreStatus
+	name,page,limit := 
+	c.Query("name"),
+	c.Query("page"),
+	c.Query("limit")
 
-	tx := getDb().Model(&m.StoreStatus{})
+	ch := make(chan []m.StoreStatus)
+	errCh := make(chan error)
 
-	name,page := c.Query("name"),c.Query("page")
+	go func(name string,page string,limit string){
+		var store_status []m.StoreStatus
 
-	if name != "" {
-		tx.Where("name ILIKE ?",name)
-	}
+		tx := getDb().Model(&m.StoreStatus{})
 
-	limit := 10
+		var args []interface{}
 
-	if page != "" {
-		p ,err:= strconv.ParseInt(page,10,64)
+		var query string
 
-		if err != nil {
-			panic("Invalid data")
+		var lmt int
+
+		if name != "" {
+			r := regexp.MustCompile(`\W`)
+			result := r.ReplaceAllString(name,"")
+			query = h.QueryBuild(query,"name ILIKE ?")
+			args = append(args, "%"+result+"%")
+		}
+	
+		if limit == "" {
+			lmt = 10
+		}else {
+			if l,err := strconv.ParseInt(limit,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				ch <- nil
+				return
+			}else {
+				lmt = int(l)
+			}
+		}
+	
+		if page != "" {
+			p ,err:= strconv.ParseInt(page,10,64)
+	
+			if err != nil {
+				errCh <- errors.New(err.Error())
+				ch <- nil
+				return
+			}
+	
+			offset := (int(p) - 1) * lmt
+	
+			tx.Offset(offset)
+		}
+	
+		tx.Limit(lmt)
+	
+		
+		tx.Where(query,args...).Find(&store_status)
+
+		if len(store_status) < 1 {
+			errCh <- errors.New("Data not found") 
+			ch <- nil
+			return
 		}
 
-		offset := (int(p) - 1) * limit
+		ch <- store_status
+	}(name,page,limit)
 
-		tx.Offset(offset)
+	select {
+	case storeStatus := <- ch :
+		c.JSON(http.StatusOK,storeStatus)
+		return
+	case err := <- errCh : 
+		panic(err.Error())
+	}
+}
+
+func UpdateStoreStatusName(c *gin.Context){
+	var store_status m.StoreStatus
+
+	name := c.PostForm("name")
+
+	id := c.Param("id")
+
+	if name == "" {
+		panic("Invalid data")
 	}
 
-	tx.Limit(limit)
+	errCh := make(chan error)
 
-	go func (){
-		tx.Find(&store_status)
+	go func ()  {
+		if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
+			errCh <- errors.New("Data not found")
+			return
+		}
+	
+		store_status.Name = name
+	
+		if err := getDb().Save(&store_status).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
 	}()
 
-	c.JSON(http.StatusOK,gin.H{"data":store_status})
-	return
+	if err := <- errCh ;err != nil {
+		panic(err.Error())
+	}
 
+	c.JSON(http.StatusCreated,gin.H{"message": "success"})
+}
+
+func UpdateStoreStatusExp(c *gin.Context){
+	var store_status m.StoreStatus
+
+	exp := c.PostForm("exp")
+
+	id := c.Param("id")
+
+	if exp == "" {
+		panic("Invalid data")
+	}
+
+	errCh := make(chan error)
+
+	e,er := strconv.ParseInt(exp,10,64)
+
+	if er != nil {
+		panic(er.Error())
+	}
+
+	go func ()  {
+		if err := getDb().Where("id = ?", id).First(&store_status).Error; err != nil {
+			errCh <- errors.New("Data not found")
+			return
+		}
+
+		store_status.Minimum_exp = int(e)
+
+		if err := getDb().Save(&store_status).Error ; err != nil {
+			errCh <- err
+		}
+
+		errCh <- nil
+	}()
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }

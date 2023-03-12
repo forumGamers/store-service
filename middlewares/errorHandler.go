@@ -15,14 +15,43 @@ func ErrorHandler(c *gin.Context) {
 			return
 		}
 		switch msg {
+		case "record not found" :
+			msg = "Data not found"
 		case "Data not found" :
 			s = http.StatusNotFound
+			break
+		case "Failed to parse image" :
+			s = http.StatusBadRequest
 			break
 		case "Forbidden":
 			s = http.StatusForbidden
 			break
+		case "Invalid params" :
+			s = http.StatusBadRequest
+			break
+		case "You have not store yet" : 
+			s = http.StatusBadRequest
+			break
 		case "Invalid data":
 			s = http.StatusBadRequest
+			break
+		case "Stock is not enough" :
+			s = http.StatusBadRequest
+			break
+		case "voucher is not registered" :
+			s = http.StatusBadRequest
+			break
+		case "name is already use" :
+			s = http.StatusConflict
+			break
+		case "you already have a store" :
+			s = http.StatusConflict
+			break
+		case "Bad Gateway" :
+			s = http.StatusBadGateway
+			break
+		case "Unauthorize" :
+			s = http.StatusUnauthorized
 			break
 		default :
 			fmt.Println(msg)

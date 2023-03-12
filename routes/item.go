@@ -9,5 +9,23 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri := rg.Group("/item")
 
-	uri.POST("/",c.CreateItem)
+	uri.GET("/",c.GetAllItem)
+
+	uri.GET("/store/:storeId",c.GetItemByStoreId)
+
+	uri.PATCH("/change-desc/:id",c.UpdateItemDesc)
+
+	uri.PATCH("/change-image/:id",c.UpdateItemImage)
+
+	uri.PATCH("/add-stock/:id",c.AddStock)
+
+	uri.PATCH("/change-price/:id",c.UpdatePrice)
+
+	uri.PATCH("/change-name/:id",c.UpdateName)
+
+	uri.PATCH("/change-discount/:id",c.UpdateItemDiscount)
+
+	uri.GET("/:slug",c.GetItemBySlug)
+
+	uri.POST("/:storeId",c.CreateItem)
 }
