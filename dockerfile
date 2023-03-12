@@ -8,10 +8,11 @@ WORKDIR /app/bin
 COPY bin/main.go .
 
 # Build aplikasi Go
-RUN go build bin/main.go
+RUN go mod tidy && \
+    go build bin/main .
 
 # Expose port 4000 untuk aplikasi
 EXPOSE 4000
 
 # Jalankan aplikasi saat container dijalankan
-CMD ["./main.exe"]
+CMD ["./main"]
