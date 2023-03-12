@@ -33,5 +33,17 @@ func Routes(){
 
 	r.store_status_routes(groupRoutes)
 
+	r.itemRoutes(groupRoutes)
+
+	r.followerRoutes(groupRoutes)
+
+	r.favoriteRoutes(groupRoutes)
+
+	r.transactionRoutes(groupRoutes)
+
+	r.cartRoutes(groupRoutes)
+
+	r.voucherRoutes(groupRoutes)
+
 	r.router.Run(":4000")
 }

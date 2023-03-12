@@ -2,12 +2,18 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"regexp"
+
 	"strconv"
-	"sync"
 	"time"
 
+	cfg "github.com/forumGamers/store-service/config"
+	h "github.com/forumGamers/store-service/helper"
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
@@ -22,7 +28,7 @@ func getDb() *gorm.DB {
 func CreateStore(c *gin.Context){
 	var store m.Store
 
-	name,image,description := c.PostForm("name"),c.PostForm("image"),c.PostForm("description")
+	name,description := c.PostForm("name"),c.PostForm("description")
 
 	owner_id := c.Request.Header.Get("id")
 
@@ -34,29 +40,171 @@ func CreateStore(c *gin.Context){
 		panic("Forbidden")
 	}
 
-	store.Name = name
+	id,er := strconv.ParseInt(owner_id,10,64)
 
-	store.Image = image
+	if er != nil {
+		panic("Invalid data")
+	}
+
+	checkCh := make(chan error)
+
+	go func (name string, ownerId int) {
+		var check m.Store
+
+		getDb().Where("name = ? or owner_id = ?",name,ownerId).First(&check)
+
+		if c := check.Name == name ; c != false {
+			checkCh <- errors.New("name is already use")
+			return
+		}
+
+		if c := check.Owner_id == ownerId ; c != false {
+			checkCh <- errors.New("you already have a store")
+			return
+		}
+
+		checkCh <- nil
+	}(name,int(id))
+
+	if err := <- checkCh ; err != nil {
+		panic(err.Error())
+	}
+
+	var img string
+
+	if image,err := c.FormFile("image") ; err == nil {
+
+		if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+			panic(err.Error())
+		}
+	
+		file,_ := os.Open("uploads/"+image.Filename)
+	
+		data,errParse := ioutil.ReadAll(file)
+		
+		if errParse != nil {
+			panic(errParse.Error())
+		}
+	
+		urlCh := make (chan string)
+		fileIdCh := make(chan string)
+		errCh := make(chan error)
+	
+		go func (data []byte, image string){
+			url ,fileId ,errUpload := cfg.UploadImage(data,image,"storeImage")
+	
+			if errUpload != nil {
+				urlCh <- ""
+				fileIdCh <- ""
+				errCh <- errors.New("Bad Gateway")
+				return
+			}
+	
+			urlCh <- url
+			fileIdCh <- fileId
+			errCh <- nil
+			return
+		}(data,image.Filename)
+	
+		select {
+		case url := <- urlCh :
+			if url == "" {
+				panic("Internal Server Error")
+			}else {
+				file.Close()
+				store.Image = url
+				store.ImageId = <- fileIdCh
+			}
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		}
+		img = image.Filename
+	}
+
+	var bgImg string
+
+	if bg,err := c.FormFile("background") ; err == nil {
+		if err := c.SaveUploadedFile(bg,"uploads/"+bg.Filename) ; err != nil {
+			panic(err.Error())
+		}
+
+		file,_ := os.Open("uploads/"+bg.Filename)
+
+		data,errParse := ioutil.ReadAll(file)
+		
+		if errParse != nil {
+			panic(errParse.Error())
+		}
+	
+		bgCh := make (chan string)
+		bgIdCh := make(chan string)
+		errBgCh := make(chan error)
+	
+		go func (data []byte, image string){
+			url ,fileId ,errUpload := cfg.UploadImage(data,image,"storeImage")
+	
+			if errUpload != nil {
+				bgCh <- ""
+				bgIdCh <- ""
+				errBgCh <- errors.New("Bad Gateway")
+				return
+			}
+	
+			bgCh <- url
+			bgIdCh <- fileId
+			errBgCh <- nil
+			return
+		}(data,bg.Filename)
+	
+		select {
+		case url := <- bgCh :
+			if url == "" {
+				panic("Internal Server Error")
+			}else {
+				file.Close()
+				store.Background = url
+				store.BackgroundId = <- bgIdCh
+			}
+		case err := <- errBgCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		}
+		bgImg = bg.Filename
+	}
+
+	store.Name = name
 
 	store.Description = description
 
-	id,_ := strconv.ParseInt(owner_id,10,64)
-
 	store.Owner_id = int(id)
+
+	store.Status_id = 1
 
 	err := make(chan error)
 
 	go func () {
-		res := getDb().Create(&store)
 
-		if res.Error != nil {
-			err <- res.Error
-		}else {
-			err <- nil
+		if errCreate := getDb().Create(&store).Error ; errCreate != nil {
+			err <- errCreate
 		}
+
+		err <- nil
 	}()
 
 	if <- err == nil {
+		if img != "" {
+			if err := os.Remove("uploads/"+img) ; err != nil {
+				fmt.Println(err)
+			}
+		}
+		if bgImg != "" {
+			if err := os.Remove("uploads/"+bgImg) ; err != nil {
+				fmt.Println(err)
+			}
+		}
 		c.JSON(http.StatusCreated,gin.H{"message":"success"})
 		return
 	}else {
@@ -67,8 +215,6 @@ func CreateStore(c *gin.Context){
 func UpdateStoreName(c *gin.Context){
 	var store m.Store
 	id := c.Request.Header.Get("id")
-
-	storeId := c.Param("id")
 
 	name := c.PostForm("name")
 
@@ -88,12 +234,12 @@ func UpdateStoreName(c *gin.Context){
 		panic(er.Error())
 	}
 
-	go func ()  {
-		if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
+	go func (id int)  {
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
 			errCh <- errors.New("Data not found")
 		}
 	
-		if int(Id) != store.Owner_id {
+		if int(id) != store.Owner_id {
 			errCh <- errors.New("Forbidden")
 		}
 	
@@ -104,7 +250,7 @@ func UpdateStoreName(c *gin.Context){
 		}
 		
 		errCh <- nil
-	}()
+	}(int(Id))
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
@@ -120,8 +266,6 @@ func UpdateStoreDesc(c *gin.Context){
 
 	id := c.Request.Header.Get("id")
 
-	storeId := c.Param("id")
-
 	if id == "" {
 		panic("Forbidden")
 	}
@@ -134,8 +278,8 @@ func UpdateStoreDesc(c *gin.Context){
 
 	errCh := make(chan error)
 
-	go func ()  {
-		if err := getDb().Where("id = ?",storeId).First(&store).Error ; err != nil {
+	go func (id int)  {
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
 			errCh <- errors.New("Data not found")
 			return
 		}
@@ -153,7 +297,7 @@ func UpdateStoreDesc(c *gin.Context){
 		}
 
 		errCh <- nil
-	}()
+	}(int(Id))
 
 	if err := <- errCh; err != nil {
 		panic(err.Error())
@@ -162,111 +306,507 @@ func UpdateStoreDesc(c *gin.Context){
 	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
 
+func UpdateStoreImage(c *gin.Context){
+	var store m.Store
+
+	image , r := c.FormFile("image")
+
+	id := c.Request.Header.Get("id")
+
+	if r != nil {
+		panic("Invalid data")
+	}
+
+	storeCh := make(chan m.Store)
+	errCheckCh := make(chan error)
+
+	go func(id string){
+		var check m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&check).Error ; err != nil {
+			errCheckCh <- errors.New("Data not found")
+			storeCh <- check
+			return
+		}
+
+		errCheckCh <- nil
+		storeCh <- check
+	}(id)
+
+	if err := <- errCheckCh ; err != nil {
+		panic(err.Error())
+	}
+
+	store = <- storeCh
+
+	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+		panic(err.Error())
+	}
+
+	file,_ := os.Open("uploads/"+image.Filename)
+
+	data,errParse := ioutil.ReadAll(file)
+	
+	if errParse != nil {
+		panic(errParse.Error())
+	}
+
+	urlCh := make(chan string)
+	fileIdCh := make(chan string)
+	errCh := make(chan error)
+
+	go func(data []byte ,image *multipart.FileHeader,fileId string){
+
+		url,id,err := cfg.UpdateImage(data,image.Filename,"storeImage",fileId)
+
+		if err != nil {
+			errCh <- errors.New(err.Error())
+			urlCh <- url
+			fileIdCh <- id
+			return
+		}
+
+		urlCh <- url
+		fileIdCh <- id
+		errCh <- nil
+	}(data ,image,store.ImageId)
+
+
+	select {
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		case url := <- urlCh :
+			file.Close()
+			store.Image = url
+			store.ImageId = <- fileIdCh
+		}
+
+	os.Remove("uploads/"+image.Filename)
+
+	errUpdate := make(chan error)
+
+	go func(store m.Store){
+		if err := getDb().Save(&store).Error ; err != nil {
+			errUpdate <- errors.New(err.Error())
+			return
+		}
+
+		errUpdate <- nil
+	}(store)
+
+	if err := <- errUpdate ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
+func UpdateStoreBg(c *gin.Context){
+	var store m.Store
+
+	image , r := c.FormFile("background")
+
+	id := c.Request.Header.Get("id")
+
+	if r != nil {
+		panic("Invalid data")
+	}
+
+	storeCh := make(chan m.Store)
+	errCheckCh := make(chan error)
+
+	go func(id string){
+		var check m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&check).Error ; err != nil {
+			errCheckCh <- errors.New("Data not found")
+			storeCh <- check
+			return
+		}
+
+		errCheckCh <- nil
+		storeCh <- check
+	}(id)
+
+	if err := <- errCheckCh ; err != nil {
+		panic(err.Error())
+	}
+
+	store = <- storeCh
+
+	if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
+		panic(err.Error())
+	}
+
+	file,_ := os.Open("uploads/"+image.Filename)
+
+	data,errParse := ioutil.ReadAll(file)
+	
+	if errParse != nil {
+		panic(errParse.Error())
+	}
+
+	urlCh := make(chan string)
+	fileIdCh := make(chan string)
+	errCh := make(chan error)
+
+	go func(data []byte ,image *multipart.FileHeader,fileId string){
+
+		url,id,err := cfg.UpdateImage(data,image.Filename,"storeImage",fileId)
+
+		if err != nil {
+			errCh <- errors.New(err.Error())
+			urlCh <- url
+			fileIdCh <- id
+			return
+		}
+
+		urlCh <- url
+		fileIdCh <- id
+		errCh <- nil
+	}(data ,image,store.ImageId)
+
+
+	select {
+		case err := <- errCh :
+			if err != nil {
+				panic(err.Error())
+			}
+		case url := <- urlCh :
+			file.Close()
+			store.Background = url
+			store.BackgroundId = <- fileIdCh
+		}
+
+	os.Remove("uploads/"+image.Filename)
+
+	errUpdate := make(chan error)
+
+	go func(store m.Store){
+		if err := getDb().Save(&store).Error ; err != nil {
+			errUpdate <- errors.New(err.Error())
+			return
+		}
+
+		errUpdate <- nil
+	}(store)
+
+	if err := <- errUpdate ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
+
 func GetAllStores(c *gin.Context){
-	name,minDate,maxDate,owner,active,minExp,maxExp := 
+	name,minDate,maxDate,owner,active,minExp,maxExp,page,limit := 
 	c.Query("name"),
 	c.Query("minDate"),
 	c.Query("maxDate"),
 	c.Query("owner"),
 	c.Query("active"),
 	c.Query("minExp"),
-	c.Query("maxExp")
+	c.Query("maxExp"),
+	c.Query("page"),
+	c.Query("limit")
 
 	var store []m.Store
 
-	var wg sync.WaitGroup
+	errCh := make(chan error)
+	storeCh := make(chan []m.Store)
 
-	var res string
+	go func (
+		name string,
+		minDate string,
+		maxDate string,
+		owner string,
+		active string,
+		minExp string,
+		maxExp string,
+		page string,
+		limit string,
+		){
 
-	tx := getDb().Model(m.Store{})
+		var data []m.Store
 
-	wg.Add(1)
+		var res string
 
-	if name != "" {
-		r := regexp.MustCompile(`\W`)
-		res = r.ReplaceAllString(name,"")
-		tx.Where("name ILIKE ?",res)
+		var args []interface{}
+
+		var query string
+
+		var pg int
+
+		var lmt int
+
+		if name != "" {
+			r := regexp.MustCompile(`\W`)
+			res = r.ReplaceAllString(name,"")
+			query = h.QueryBuild(query,"name ILIKE ?")
+			args = append(args, "%"+res+"%")
+		}
+	
+		if minDate != "" && maxDate != "" {
+			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+			args = append(args,minDate,maxDate)
+	
+		}else if minDate != "" {
+			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at >= ?")
+			args = append(args,minDate)
+	
+		}else if maxDate != "" {
+			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"created_at <= ?")
+			args = append(args, maxDate)
+		}
+	
+		if owner != "" {
+			if _,err := strconv.ParseInt(owner,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"owner_id = ?")
+			args = append(args, owner)
+		}
+	
+		if active != "" {
+			if _,err := strconv.ParseBool(active) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"active = ?")
+			args = append(args, active)
+		}
+	
+		if minExp != "" && maxExp != "" {
+			if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"(exp BETWEEN ? and ?)")
+			args = append(args, minExp,maxExp)
+	
+		}else if minExp != "" {
+			if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"exp >= ?")
+			args = append(args, minExp)
+	
+		}else if maxExp != "" {
+			if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}
+	
+			query = h.QueryBuild(query,"exp <= ?")
+			args = append(args, maxExp)
+		}
+
+		if limit == "" {
+			lmt = 10
+		}else {
+			if lm,err := strconv.ParseInt(limit,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}else {
+				lmt = int(lm)
+			}
+		}
+
+		if page == "" {
+			pg = 1
+		}else {
+			if p,err := strconv.ParseInt(page,10,64) ; err != nil {
+				errCh <- errors.New(err.Error())
+				storeCh <- nil
+				return
+			}else {
+				pg = int(p)
+			}
+		}
+
+		getDb().Model(m.Store{}).Where(query,args...).Preload("Items").Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
+
+		if len(data) < 1 {
+			errCh <- errors.New("Data not found")
+			storeCh <- nil
+			return
+		}
+
+		storeCh <- data
+
+		errCh <- nil
+	}(
+		name,
+		minDate,
+		maxDate,
+		owner,
+		active,
+		minExp,
+		maxExp,
+		page,
+		limit,
+	)
+
+	select {
+	case err := <- errCh : 
+		if err != nil {
+			panic(err.Error())
+		}
+	case store = <- storeCh :
+		c.JSON(http.StatusOK,store)
+		return
+	}
+}
+
+func GetStoreById(c *gin.Context){
+	id := c.Param("id")
+
+	errCh := make(chan error)
+
+	ch := make(chan m.Store)
+
+	go func (id string){
+		var store m.Store
+
+		if err := getDb().Where("id = ?",id).Preload("Items").Find(&store).Error ; err != nil {
+			errCh <- errors.New("Data not found")
+			ch <- m.Store{}
+			return
+		}else {
+			errCh <- nil
+			ch <- store
+		}
+	}(id)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
 	}
 
-	if minDate != "" && maxDate != "" {
-		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
-			panic(err.Error())
-		}
+	store := <- ch
 
-		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
-			panic(err.Error())
-		}
+	c.JSON(http.StatusOK,store)
+}
 
-		tx.Where("created_at BETWEEN ? and ?",minDate,maxDate)
+func DeactiveStore(c *gin.Context){
+	id := c.Request.Header.Get("id")
 
-	}else if minDate != "" {
-		if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
-			panic(err.Error())
-		}
-
-		tx.Where("created_at >= ?",minDate)
-
-	}else if maxDate != "" {
-		if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
-			panic(err.Error())
-		}
-
-		tx.Where("created_at <= ?",maxDate)
+	if id == "" {
+		panic("Forbidden")
 	}
 
-	if owner != "" {
-		if _,err := strconv.ParseInt(owner,10,64) ; err != nil {
-			panic(err.Error())
-		}
+	Id,er := strconv.ParseInt(id,10,64)
 
-		tx.Where("owner = ?",owner)
+	if er != nil {
+		panic(er.Error())
 	}
 
-	if active != "" {
-		if _,err := strconv.ParseBool(active) ; err != nil {
-			panic(err.Error())
+	errCh := make(chan error)
+
+	go func(id int){
+		var store m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
 		}
 
-		tx.Where("active = ?",active)
+		store.Active = false
 
+		if err := getDb().Save(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
 	}
 
-	if minExp != "" && maxExp != "" {
-		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
+}
 
-		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
+func ReactivedStore(c *gin.Context){
+	id := c.Request.Header.Get("id")
 
-		tx.Where("exp BETWEEN ? and ?",minExp,maxExp)
-
-	}else if minExp != "" {
-		if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		tx.Where("exp >= ?",minExp)
-
-	}else if maxExp != "" {
-		if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
-			panic(err.Error())
-		}
-
-		tx.Where("exp <= ?",maxExp)
+	if id == "" {
+		panic("Forbidden")
 	}
 
-	go func ()  {
-		defer wg.Done()
-		tx.Find(&store)
-	}()
+	Id,er := strconv.ParseInt(id,10,64)
 
-	wg.Wait()
-
-	if len(store) < 1 {
-		panic("Data not found")
+	if er != nil {
+		panic(er.Error())
 	}
 
-	c.JSON(http.StatusOK,gin.H{"data" : store})
+	errCh := make(chan error)
+
+	go func(id int){
+		var store m.Store
+
+		if err := getDb().Where("owner_id = ?",id).First(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		store.Active = true
+
+		if err := getDb().Save(&store).Error ; err != nil {
+			errCh <- errors.New(err.Error())
+			return
+		}
+
+		errCh <- nil
+	}(int(Id))
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
