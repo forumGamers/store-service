@@ -826,12 +826,12 @@ func GetStoreName(c *gin.Context){
 
 		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).First(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				storeName <- ""
 				errCh <- errors.New("Data not found")
+				storeName <- ""
 				return
 			}else {
-				storeName <- ""
 				errCh <- err
+				storeName <- ""
 				return
 			}
 		}
