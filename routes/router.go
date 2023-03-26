@@ -3,7 +3,6 @@ package routes
 import (
 	"net/http"
 	"os"
-	"strings"
 
 	md "github.com/forumGamers/store-service/middlewares"
 	"github.com/gin-contrib/cors"
@@ -34,7 +33,7 @@ func Routes(){
 	r.router.Use(func (c *gin.Context){
 		if c.Request.Method != "OPTIONS" {
 			origin := c.Request.Header.Get("Origin")
-			if origin == "" || !strings.Contains(strings.Join(c.Request.Header["Origin"], ","), origin) {
+			if origin == "" {
                 c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "Forbidden"})
                 return
             }
