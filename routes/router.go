@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"os"
+	"strings"
 
 	md "github.com/forumGamers/store-service/middlewares"
 	"github.com/gin-contrib/cors"
@@ -23,8 +24,26 @@ func Routes(){
 
 	r := routes { router: gin.Default() }
 
-	r.router.Use(cors.Default())
-	
+	c := cors.New(cors.Config{
+		AllowOrigins: []string{os.Getenv("CORSLIST")},
+		AllowMethods: []string{"GET","POST","PUT","DELETE","PATCH","OPTIONS"},
+		AllowHeaders: []string{"Content-Type","Authorization"},
+		AllowCredentials: true,
+	})
+
+	r.router.Use(func (c *gin.Context){
+		if c.Request.Method != "OPTIONS" {
+			origin := c.Request.Header.Get("Origin")
+			if origin == "" || !strings.Contains(strings.Join(c.Request.Header["Origin"], ","), origin) {
+                c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "Forbidden"})
+                return
+            }
+		}
+		c.Next()
+	})
+
+	r.router.Use(c)
+
 	r.router.Use(logger.SetLogger())
 
 	r.router.Use(md.ErrorHandler)
