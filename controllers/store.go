@@ -810,3 +810,41 @@ func ReactivedStore(c *gin.Context){
 
 	c.JSON(http.StatusCreated,gin.H{"message":"success"})
 }
+
+func GetStoreName(c *gin.Context){
+	id := c.Request.Header.Get("id")
+
+	if _,err := strconv.ParseInt(id,10,64) ; err != nil {
+		panic("Invalid data")
+	}
+
+	storeName := make(chan string)
+	errCh := make(chan error)
+
+	go func (id string){
+		var data m.Store 
+
+		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).First(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				storeName <- ""
+				errCh <- errors.New("Data not found")
+				return
+			}else {
+				storeName <- ""
+				errCh <- err
+				return
+			}
+		}
+
+		errCh <- nil
+		storeName <- data.Name
+	}(id)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	name := <- storeName
+
+	c.JSON(http.StatusOK,name)
+}

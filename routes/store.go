@@ -13,6 +13,8 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 
 	uri.GET("/",c.GetAllStores)
 
+	uri.GET("/name",c.GetStoreName)
+
 	uri.PATCH("/change-name",c.UpdateStoreName)
 
 	uri.PATCH("/change-desc",c.UpdateStoreDesc)
