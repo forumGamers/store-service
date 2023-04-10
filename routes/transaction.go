@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/forumGamers/store-service/cmd"
-	c "github.com/forumGamers/store-service/controllers"
+	q "github.com/forumGamers/store-service/query"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,5 +16,5 @@ func (r routes) transactionRoutes(rg *gin.RouterGroup){
 
 	uri.PATCH("/cancel/:transactionId",cmd.CancelTransaction)
 
-	uri.GET("/",c.GetAllTransaction)
+	uri.GET("/",q.GetAllTransaction)
 }

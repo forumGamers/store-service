@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/forumGamers/store-service/cmd"
-	c "github.com/forumGamers/store-service/controllers"
 	md "github.com/forumGamers/store-service/middlewares"
+	q "github.com/forumGamers/store-service/query"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +13,7 @@ func (r routes) store_status_routes(rg *gin.RouterGroup ){
 
 	uri.POST("/",md.AuthorizeAdmin,cmd.CreateStoreStatus)
 
-	uri.GET("/",c.GetAllStoreStatus)
+	uri.GET("/",q.GetAllStoreStatus)
 
 	uri.PATCH("/change-name/:id",md.AuthorizeAdmin,cmd.UpdateStoreStatusName)
 

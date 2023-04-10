@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/forumGamers/store-service/cmd"
-	c "github.com/forumGamers/store-service/controllers"
+	q "github.com/forumGamers/store-service/query"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,9 +10,9 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri := rg.Group("/item")
 
-	uri.GET("/",c.GetAllItem)
+	uri.GET("/",q.GetAllItem)
 
-	uri.GET("/store/:storeId",c.GetItemByStoreId)
+	uri.GET("/store/:storeId",q.GetItemByStoreId)
 
 	uri.PATCH("/change-desc/:id",cmd.UpdateItemDesc)
 
@@ -26,7 +26,7 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri.PATCH("/change-discount/:id",cmd.UpdateItemDiscount)
 
-	uri.GET("/:slug",c.GetItemBySlug)
+	uri.GET("/:slug",q.GetItemBySlug)
 
 	uri.POST("/:storeId",cmd.CreateItem)
 }

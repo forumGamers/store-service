@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/forumGamers/store-service/cmd"
-	c "github.com/forumGamers/store-service/controllers"
+	q "github.com/forumGamers/store-service/query"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,7 +11,7 @@ func (r routes) cartRoutes(rg *gin.RouterGroup){
 
 	uri.POST("/:itemId",cmd.AddCart)
 
-	uri.GET("/",c.GetCart)
+	uri.GET("/",q.GetCart)
 
 	uri.DELETE("/:id",cmd.RemoveCart)
 }

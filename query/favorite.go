@@ -1,4 +1,4 @@
-package controllers
+package query
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func GetCart(c *gin.Context){
+func GetMyFavorite(c *gin.Context){
 	user := c.Request.Header.Get("id")
 	limit,page := 
 	c.Query("limit"),
@@ -50,11 +50,11 @@ func GetCart(c *gin.Context){
 	}
 
 	errCh := make(chan error)
-	dataCh := make(chan []m.Cart)
+	dataCh := make(chan []m.Favorite)
 
 	go func(userId int,page int,limit int){
-		var data []m.Cart
-		if err := getDb().Model(m.Cart{}).Where("user_id = ?",userId).Offset((page - 1) * limit).Limit(limit).Find(&data).Error ; err != nil {
+		var data []m.Favorite
+		if err := getDb().Model(m.Favorite{}).Where("user_id = ?",userId).Offset((page - 1) * limit).Limit(limit).Find(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				errCh <- errors.New("Data not found")
 				dataCh <- nil
@@ -74,7 +74,7 @@ func GetCart(c *gin.Context){
 		panic(err.Error())
 	}
 
-	cart := <- dataCh
+	favorite := <- dataCh
 
-	c.JSON(http.StatusOK,cart)
+	c.JSON(http.StatusOK,favorite)
 }

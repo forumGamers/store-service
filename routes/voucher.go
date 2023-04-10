@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/forumGamers/store-service/cmd"
-	c "github.com/forumGamers/store-service/controllers"
+	q "github.com/forumGamers/store-service/query"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,9 +11,9 @@ func (r routes) voucherRoutes(rg *gin.RouterGroup){
 
 	uri.POST("/",cmd.AddVoucher)
 
-	uri.GET("/",c.GetAllVoucher)
+	uri.GET("/",q.GetAllVoucher)
 
-	uri.GET("/:id",c.GetVoucherById)
+	uri.GET("/:id",q.GetVoucherById)
 
 	uri.DELETE("/:id",cmd.DeleteVoucher)
 }
