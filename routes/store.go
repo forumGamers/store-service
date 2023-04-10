@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/forumGamers/store-service/cmd"
 	c "github.com/forumGamers/store-service/controllers"
 	"github.com/gin-gonic/gin"
 )
@@ -9,23 +10,23 @@ func (r routes) storeRoutes(rg *gin.RouterGroup){
 
 	uri := rg.Group("/store")
 
-	uri.POST("/",c.CreateStore)
+	uri.POST("/",cmd.CreateStore)
 
 	uri.GET("/",c.GetAllStores)
 
 	uri.GET("/name",c.GetStoreName)
 
-	uri.PATCH("/change-name",c.UpdateStoreName)
+	uri.PATCH("/change-name",cmd.UpdateStoreName)
 
-	uri.PATCH("/change-desc",c.UpdateStoreDesc)
+	uri.PATCH("/change-desc",cmd.UpdateStoreDesc)
 
-	uri.PATCH("/change-image",c.UpdateStoreImage)
+	uri.PATCH("/change-image",cmd.UpdateStoreImage)
 
-	uri.PATCH("/change-background",c.UpdateStoreBg)
+	uri.PATCH("/change-background",cmd.UpdateStoreBg)
 
-	uri.PATCH("/deactived",c.DeactiveStore)
+	uri.PATCH("/deactived",cmd.DeactiveStore)
 
-	uri.PATCH("/reactived",c.ReactivedStore)
+	uri.PATCH("/reactived",cmd.ReactivedStore)
 
 	uri.GET("/:id",c.GetStoreById)
 }
