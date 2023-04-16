@@ -67,27 +67,23 @@ func AddCart(c *gin.Context){
 
 func RemoveCart(c *gin.Context){
 	cart := c.Param("id")
-	user := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 
-	if user == "" {
-		panic("Forbidden")
-	}
+	id,err := strconv.ParseInt(cart,10,64)
 
-	id,er := strconv.ParseInt(cart,10,64)
-
-	if er != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
 	errCh := make(chan error)
 
-	go func(id int,userId string){
+	go func(id int,userId int){
 		if err := getDb().Model(m.Cart{}).Where("user_id = ?",userId).Delete(m.Cart{},id).Error ; err != nil {
 			errCh <- err
 			return
 		}
 		errCh <- nil
-	}(int(id),user)
+	}(int(id),user.Id)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
