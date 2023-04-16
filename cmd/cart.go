@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 
 	"github.com/gin-gonic/gin"
@@ -12,18 +13,12 @@ import (
 )
 
 func AddCart(c *gin.Context){
-	user := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 	itemId := c.Param("itemId")
 
-	id,r := strconv.ParseInt(user,10,64)
+	item,err := strconv.ParseInt(itemId,10,64)
 
-	if r != nil {
-		panic("Forbidden")
-	}
-
-	item,er := strconv.ParseInt(itemId,10,64)
-
-	if er != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
@@ -42,13 +37,15 @@ func AddCart(c *gin.Context){
 		errCh <- errors.New("Conflict")
 	}(int(item))
 
-	if err := <- errCh ; err != nil {
-		panic(err.Error())
-	}
-
 	errCreate := make(chan error)
 
 	go func(userId int,itemId int){
+
+		if err := <- errCh ; err != nil {
+			errCreate <- err
+			return
+		}
+
 		var data m.Cart
 		data.Item_id = itemId
 		data.User_id = uint(userId)
@@ -59,7 +56,7 @@ func AddCart(c *gin.Context){
 		}
 
 		errCreate <- nil
-	}(int(id),int(item))
+	}(user.Id,int(item))
 
 	if err := <- errCreate ; err != nil {
 		panic(err.Error())
