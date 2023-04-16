@@ -7,7 +7,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strconv"
 
 	cfg "github.com/forumGamers/store-service/config"
 	h "github.com/forumGamers/store-service/helper"
@@ -200,24 +199,14 @@ func CreateStore(c *gin.Context){
 
 func UpdateStoreName(c *gin.Context){
 	var store m.Store
-	id := c.Request.Header.Get("id")
+	Id := h.GetUser(c).Id
 
 	name := c.PostForm("name")
 
 	errCh := make(chan error)
 
-	if id == "" {
-		panic("Forbidden")
-	}
-
 	if name == "" {
 		panic("Invalid data")
-	}
-
-	Id,er := strconv.ParseInt(id,10,64)
-
-	if er != nil {
-		panic(er.Error())
 	}
 
 	go func (id int)  {
@@ -250,17 +239,7 @@ func UpdateStoreDesc(c *gin.Context){
 
 	desc := c.PostForm("description")
 
-	id := c.Request.Header.Get("id")
-
-	if id == "" {
-		panic("Forbidden")
-	}
-
-	Id,er := strconv.ParseInt(id,10,64)
-
-	if er != nil {
-		panic(er.Error())
-	}
+	Id := h.GetUser(c).Id
 
 	errCh := make(chan error)
 
@@ -270,7 +249,7 @@ func UpdateStoreDesc(c *gin.Context){
 			return
 		}
 
-		if Id != int64(store.Owner_id) {
+		if Id != store.Owner_id {
 			errCh <- errors.New("Forbidden")
 			return
 		}
@@ -283,7 +262,7 @@ func UpdateStoreDesc(c *gin.Context){
 		}
 
 		errCh <- nil
-	}(int(Id))
+	}(Id)
 
 	if err := <- errCh; err != nil {
 		panic(err.Error())
@@ -295,18 +274,18 @@ func UpdateStoreDesc(c *gin.Context){
 func UpdateStoreImage(c *gin.Context){
 	var store m.Store
 
-	image , r := c.FormFile("image")
+	image , err := c.FormFile("image")
 
-	id := c.Request.Header.Get("id")
-
-	if r != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
+
+	id := h.GetUser(c).Id
 
 	storeCh := make(chan m.Store)
 	errCheckCh := make(chan error)
 
-	go func(id string){
+	go func(id int){
 		var check m.Store
 
 		if err := getDb().Where("owner_id = ?",id).First(&check).Error ; err != nil {
@@ -392,18 +371,18 @@ func UpdateStoreImage(c *gin.Context){
 func UpdateStoreBg(c *gin.Context){
 	var store m.Store
 
-	image , r := c.FormFile("background")
+	id := h.GetUser(c).Id
 
-	id := c.Request.Header.Get("id")
+	image , err := c.FormFile("background")
 
-	if r != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
 	storeCh := make(chan m.Store)
 	errCheckCh := make(chan error)
 
-	go func(id string){
+	go func(id int){
 		var check m.Store
 
 		if err := getDb().Where("owner_id = ?",id).First(&check).Error ; err != nil {
@@ -487,17 +466,7 @@ func UpdateStoreBg(c *gin.Context){
 }
 
 func DeactiveStore(c *gin.Context){
-	id := c.Request.Header.Get("id")
-
-	if id == "" {
-		panic("Forbidden")
-	}
-
-	Id,er := strconv.ParseInt(id,10,64)
-
-	if er != nil {
-		panic(er.Error())
-	}
+	Id := h.GetUser(c).Id
 
 	errCh := make(chan error)
 
@@ -517,7 +486,7 @@ func DeactiveStore(c *gin.Context){
 		}
 
 		errCh <- nil
-	}(int(Id))
+	}(Id)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
@@ -527,17 +496,7 @@ func DeactiveStore(c *gin.Context){
 }
 
 func ReactivedStore(c *gin.Context){
-	id := c.Request.Header.Get("id")
-
-	if id == "" {
-		panic("Forbidden")
-	}
-
-	Id,er := strconv.ParseInt(id,10,64)
-
-	if er != nil {
-		panic(er.Error())
-	}
+	Id := h.GetUser(c).Id
 
 	errCh := make(chan error)
 
@@ -557,7 +516,7 @@ func ReactivedStore(c *gin.Context){
 		}
 
 		errCh <- nil
-	}(int(Id))
+	}(Id)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
