@@ -5,25 +5,20 @@ import (
 	"net/http"
 	"strconv"
 
+	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
 
 func GetMyFavorite(c *gin.Context){
-	user := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 	limit,page := 
 	c.Query("limit"),
 	c.Query("page")
 
 	var lmt int
 	var pg int
-
-	id,err := strconv.ParseInt(user,10,64)
-
-	if err != nil {
-		panic("Forbidden")
-	}
 
 	if limit == "" {
 		lmt = 10
@@ -68,7 +63,7 @@ func GetMyFavorite(c *gin.Context){
 
 		errCh <- nil
 		dataCh <- data
-	}(int(id),int(pg),int(lmt))
+	}(user.Id,int(pg),int(lmt))
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
