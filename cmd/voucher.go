@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	h"github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 	s "github.com/forumGamers/store-service/services"
 	"github.com/gin-gonic/gin"
@@ -14,19 +15,15 @@ import (
 func AddVoucher(c *gin.Context) {
 	name, discount, cashback, period, stock := c.PostForm("name"), c.PostForm("discount"), c.PostForm("cashback"), c.PostForm("periode"), c.PostForm("stock")
 
-	id, storeId := c.Request.Header.Get("id"), c.Request.Header.Get("storeId")
+	Id := h.GetUser(c).Id
+
+	storeId := c.Request.Header.Get("storeId")
 
 	checkCh := make(chan error)
 
-	Id, r := strconv.ParseInt(id, 10, 64)
+	sId, err := strconv.ParseInt(storeId, 10, 64)
 
-	if r != nil {
-		panic("Forbidden")
-	}
-
-	sId, er := strconv.ParseInt(storeId, 10, 64)
-
-	if er != nil {
+	if err != nil {
 		panic("Forbidden")
 	}
 
@@ -120,18 +117,12 @@ func AddVoucher(c *gin.Context) {
 
 func DeleteVoucher(c *gin.Context){
 	storeId := c.Request.Header.Get("store")
-	id := c.Request.Header.Get("id")
+	Id := h.GetUser(c).Id
 	voucherId := c.Param("id")
 
-	store,r := strconv.ParseInt(storeId,10,64)
+	store,err := strconv.ParseInt(storeId,10,64)
 
-	if r != nil {
-		panic("Forbidden")
-	}
-
-	Id , er := strconv.ParseInt(id,10,64)
-
-	if er != nil {
+	if err != nil {
 		panic("Forbidden")
 	}
 
@@ -160,7 +151,7 @@ func DeleteVoucher(c *gin.Context){
 		}
 
 		errCh <- nil
-	}(int(Id),voucherId,int(store))
+	}(Id,voucherId,int(store))
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
