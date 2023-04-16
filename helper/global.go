@@ -26,6 +26,14 @@ func GetUser(c *gin.Context) m.User {
 			user.PhoneNumber = val.(string)
 		case "username":
 			user.Username = val.(string)
+		case "StoreId" :
+			user.StoreId = int(val.(float64))
+		case "role" :
+			user.Role = val.(string)
+		case "point" :
+			user.Point = int(val.(float64))
+		case "exp" :
+			user.Exp = int(val.(float64))
 		}
 	}
 	return user

@@ -8,4 +8,8 @@ type User struct {
 	IsVerified  bool   `json:"isVerified"`
 	PhoneNumber string `json:"phoneNumber"`
 	Username    string `json:"username"`
+	StoreId     int    `json:"StoreId"`
+	Role        string `json:"role"`
+	Point       int    `json:"point"`
+	Exp         int    `json:"exp"`
 }
