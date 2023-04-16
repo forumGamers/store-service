@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	cfg "github.com/forumGamers/store-service/config"
+	h "github.com/forumGamers/store-service/helper"
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/gin-gonic/gin"
@@ -25,19 +26,9 @@ func CreateStore(c *gin.Context){
 
 	name,description := c.PostForm("name"),c.PostForm("description")
 
-	owner_id := c.Request.Header.Get("id")
+	owner_id := h.GetUser(c).Id
 
 	if name == ""  {
-		panic("Invalid data")
-	}
-
-	if owner_id == "" {
-		panic("Forbidden")
-	}
-
-	id,er := strconv.ParseInt(owner_id,10,64)
-
-	if er != nil {
 		panic("Invalid data")
 	}
 
@@ -59,7 +50,7 @@ func CreateStore(c *gin.Context){
 		}
 
 		checkCh <- nil
-	}(name,int(id))
+	}(name,owner_id)
 
 	if err := <- checkCh ; err != nil {
 		panic(err.Error())
@@ -174,7 +165,7 @@ func CreateStore(c *gin.Context){
 
 	store.Description = description
 
-	store.Owner_id = int(id)
+	store.Owner_id = owner_id
 
 	store.Status_id = 1
 
