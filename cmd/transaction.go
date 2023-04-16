@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	h"github.com/forumGamers/store-service/helper"
 	i "github.com/forumGamers/store-service/interfaces"
 	m "github.com/forumGamers/store-service/models"
 	s "github.com/forumGamers/store-service/services"
@@ -16,7 +17,7 @@ import (
 func CreateTransaction(c *gin.Context) {
 	itemId := c.Param("itemId")
 	storeId := c.Param("storeId")
-	id := c.Request.Header.Get("id")
+	id := h.GetUser(c).Id
 
 	payment_method, amount, message :=
 		c.PostForm("payment_method"),
@@ -60,7 +61,7 @@ func CreateTransaction(c *gin.Context) {
 	go func(
 		itemId string,
 		storeId string,
-		id string,
+		id int,
 		payment_method string,
 		amount string,
 		message string,
@@ -179,7 +180,7 @@ func CreateTransaction(c *gin.Context) {
 
 func EndTransaction(c *gin.Context) {
 	transactionId := c.Param("transactionId")
-	id := c.Request.Header.Get("id")
+	id := h.GetUser(c).Id
 
 	Id, tId, err := validate.CheckEndTransactionData(id, transactionId)
 
@@ -219,7 +220,7 @@ func EndTransaction(c *gin.Context) {
 
 func CancelTransaction(c *gin.Context) {
 	transactionId := c.Param("transactionId")
-	id := c.Request.Header.Get("id")
+	id := h.GetUser(c).Id
 
 	Id, tId, err := validate.CheckEndTransactionData(id, transactionId)
 
