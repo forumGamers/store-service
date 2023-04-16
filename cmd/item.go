@@ -49,19 +49,19 @@ func CreateItem(c *gin.Context) {
 		}
 	}
 
-	if s, r := strconv.ParseInt(stock, 10, 64); r == nil {
+	if s, err := strconv.ParseInt(stock, 10, 64); err == nil {
 		item.Stock = int(s)
 	} else {
 		panic("Invalid data")
 	}
 
-	if p, r := strconv.ParseInt(price, 10, 64); r == nil {
+	if p, err := strconv.ParseInt(price, 10, 64); err == nil {
 		item.Price = int(p)
 	} else {
 		panic("Invalid data")
 	}
 
-	if d, r := strconv.ParseInt(discount, 10, 64); r == nil {
+	if d, err := strconv.ParseInt(discount, 10, 64); err == nil {
 		item.Discount = int(d)
 	} else {
 		item.Discount = 0
@@ -178,13 +178,9 @@ func CreateItem(c *gin.Context) {
 }
 
 func UpdateItemDesc(c *gin.Context){
-	id := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 	storeId := c.Request.Header.Get("storeId")
 	itemId := c.Param("id")
-
-	if id == "" {
-		panic("Forbidden")
-	}
 
 	desc := c.PostForm("description")
 
@@ -193,12 +189,6 @@ func UpdateItemDesc(c *gin.Context){
 	}
 
 	errCh := make(chan error)
-
-	Id,r := strconv.ParseInt(id,10,64)
-
-	if r != nil {
-		panic("Forbidden")
-	}
 
 	go func(id int,storeId string,itemId string,desc string){
 		var data m.Item
@@ -220,7 +210,7 @@ func UpdateItemDesc(c *gin.Context){
 		}
 
 		errCh <- nil
-	}(int(Id),storeId,itemId,desc)
+	}(user.Id,storeId,itemId,desc)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
@@ -232,11 +222,11 @@ func UpdateItemDesc(c *gin.Context){
 func UpdateItemImage(c *gin.Context){
 	var item m.Item
 
-	image , r := c.FormFile("image")
+	image , err := c.FormFile("image")
 
 	id := c.Param("id")
 
-	if r != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
@@ -331,9 +321,9 @@ func AddStock(c *gin.Context){
 
 	stock := c.PostForm("stock")
 
-	s,r := strconv.ParseInt(stock,10,64)
+	s,err := strconv.ParseInt(stock,10,64)
 
-	if r != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
@@ -363,9 +353,9 @@ func UpdatePrice(c *gin.Context){
 
 	price := c.PostForm("price")
 
-	p,r := strconv.ParseInt(price,10,64)
+	p,err := strconv.ParseInt(price,10,64)
 
-	if r != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
@@ -393,13 +383,7 @@ func UpdatePrice(c *gin.Context){
 func UpdateName(c *gin.Context){
 	storeId := c.Request.Header.Get("storeId")
 	id := c.Param("id")
-	user := c.Request.Header.Get("id")
-
-	Id,r := strconv.ParseInt(user,10,64)
-
-	if r != nil {
-		panic("Forbidden")
-	}
+	user := h.GetUser(c)
 
 	name := c.PostForm("name")
 	var item m.Item
@@ -434,7 +418,7 @@ func UpdateName(c *gin.Context){
 			itemCh <- data
 		}(id)
 
-		if item = <- itemCh ; item.Store.Owner_id != int(Id) {
+		if item = <- itemCh ; item.Store.Owner_id != user.Id {
 			panic("Forbidden")
 		}
 	}
@@ -442,13 +426,13 @@ func UpdateName(c *gin.Context){
 	errCh := make(chan error)
 	slug := h.SlugGenerator(name+" by "+item.Store.Name)
 
-	go func (id string,name string,slug string)  {
+	go func (id int,name string,slug string)  {
 		if err := getDb().Model(m.Item{}).Where("id = ?",id).Update(m.Item{Name: name,Slug: slug}).Error ; err != nil {
 			errCh <- err
 			return
 		}
 		errCh <- nil
-	}(id,name,slug)
+	}(user.Id,name,slug)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
@@ -460,25 +444,15 @@ func UpdateName(c *gin.Context){
 func UpdateItemDiscount(c *gin.Context){
 	itemId := c.Param("id")
 
-	user := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 	storeId := c.Request.Header.Get("storeId")
 
 	discount := c.PostForm("discount")
 
-	disc,er := strconv.ParseInt(discount,10,64) 
+	disc,err := strconv.ParseInt(discount,10,64) 
 
-	if er != nil {
+	if err != nil {
 		panic("Invalid data")
-	}
-
-	if user == "" {
-		panic("Forbidden")
-	}
-
-	Id,r := strconv.ParseInt(user,10,64)
-
-	if r != nil {
-		panic("Forbidden")
 	}
 
 	errCh := make(chan error)
@@ -503,7 +477,7 @@ func UpdateItemDiscount(c *gin.Context){
 		}
 
 		errCh <- nil
-	}(int(Id),storeId,itemId,int(disc))
+	}(user.Id,storeId,itemId,int(disc))
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
