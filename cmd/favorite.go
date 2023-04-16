@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
 
 	"github.com/gin-gonic/gin"
@@ -12,18 +13,12 @@ import (
 )
 
 func AddFavorite(c *gin.Context) {
-	user := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 	itemId := c.Param("id")
 
-	id, r := strconv.ParseInt(user, 10, 64)
+	item, err := strconv.ParseInt(itemId, 10, 64)
 
-	if r != nil {
-		panic("Forbidden")
-	}
-
-	item, er := strconv.ParseInt(itemId, 10, 64)
-
-	if er != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
@@ -42,13 +37,15 @@ func AddFavorite(c *gin.Context) {
 		errCh <- errors.New("Conflict")
 	}(int(item))
 
-	if err := <-errCh; err != nil {
-		panic(err.Error())
-	}
-
 	errCreate := make(chan error)
 
 	go func(userId int, itemId int) {
+
+		if err := <- errCh; err != nil {
+			errCreate <- err
+			return
+		}
+		
 		var data m.Favorite
 		data.Item_id = itemId
 		data.User_id = uint(userId)
@@ -59,7 +56,7 @@ func AddFavorite(c *gin.Context) {
 		}
 
 		errCreate <- nil
-	}(int(id), int(item))
+	}(user.Id, int(item))
 
 	if err := <-errCreate; err != nil {
 		panic(err.Error())
@@ -70,27 +67,23 @@ func AddFavorite(c *gin.Context) {
 
 func RemoveFavorite(c *gin.Context){
 	favorite := c.Param("id")
-	user := c.Request.Header.Get("id")
+	user := h.GetUser(c)
 
-	if user == "" {
-		panic("Forbidden")
-	}
+	id,err := strconv.ParseInt(favorite,10,64)
 
-	id,er := strconv.ParseInt(favorite,10,64)
-
-	if er != nil {
+	if err != nil {
 		panic("Invalid data")
 	}
 
 	errCh := make(chan error)
 
-	go func(id int,userId string){
+	go func(id int,userId int){
 		if err := getDb().Model(m.Favorite{}).Where("user_id = ?",userId).Delete(m.Favorite{},id).Error ; err != nil {
 			errCh <- err
 			return
 		}
 		errCh <- nil
-	}(int(id),user)
+	}(int(id),user.Id)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
