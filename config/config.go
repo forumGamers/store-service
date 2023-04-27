@@ -32,6 +32,7 @@ func Connection(){
 		&m.Store{},
 		&m.Item{},
 		&m.Transaction{},
+		&m.Log{},
 	)
 
 	h.SetFK(database)
