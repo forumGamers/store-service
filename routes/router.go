@@ -30,6 +30,8 @@ func Routes(){
 		c.Next()
 	})
 
+	r.router.Use(md.Logging)
+
 	c := cors.New(cors.Config{
 		AllowOrigins: []string{os.Getenv("CORSLIST")},
 		AllowMethods: []string{"GET","POST","PUT","DELETE","PATCH","OPTIONS"},
@@ -53,8 +55,6 @@ func Routes(){
 	r.router.Use(logger.SetLogger())
 
 	r.router.Use(md.ErrorHandler)
-
-	r.router.Use(md.Logging)
 
 	//testing connection
 	r.router.GET("/", func(c *gin.Context) {
