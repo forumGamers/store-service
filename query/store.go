@@ -295,7 +295,9 @@ func GetMyStore(c *gin.Context){
 	go func(id int){
 		var data m.Store
 
-		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("Items").First(&data).Error ; err != nil {
+		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("Items",func(db *gorm.DB) *gorm.DB {
+			return db.Select("items.*, NULL as store")
+		}).Preload("StoreStatus").First(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				errCh <- errors.New("Data not found")
 				dataCh <- m.Store{}
