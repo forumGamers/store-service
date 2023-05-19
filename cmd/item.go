@@ -18,7 +18,7 @@ import (
 )
 
 func CreateItem(c *gin.Context) {
-	id := c.Param("storeId")
+	user := h.GetUser(c)
 	var item m.Item
 
 	name, stock, price, description, discount :=
@@ -30,24 +30,25 @@ func CreateItem(c *gin.Context) {
 
 	if name == "" {
 		panic("Invalid data")
-	} else {
-		checkCh := make(chan error)
-		go func(name string, id string) {
-			var data m.Item
-			if err := getDb().Model(m.Item{}).Where("name = ? and store_id = ?", name, id).First(&data).Error; err != nil {
-				if err == gorm.ErrRecordNotFound {
-					checkCh <- nil
-					return
-				}
+	} 
+
+	checkCh := make(chan error)
+	go func(name string, id int) {
+		var data m.Item
+		if err := getDb().Model(m.Item{}).Where("name = ? and store_id = ?", name, id).First(&data).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				checkCh <- nil
+				return
 			}
-
-			checkCh <- errors.New("Conflict")
-		}(name, id)
-
-		if err := <-checkCh; err != nil {
-			panic(err.Error())
 		}
+
+		checkCh <- errors.New("Conflict")
+	}(name, user.StoreId)
+
+	if err := <-checkCh; err != nil {
+		panic(err.Error())
 	}
+	
 
 	if s, err := strconv.ParseInt(stock, 10, 64); err == nil {
 		item.Stock = int(s)
@@ -67,34 +68,32 @@ func CreateItem(c *gin.Context) {
 		item.Discount = 0
 	}
 
-	if Id, err := strconv.ParseInt(id, 10, 64); err != nil {
-		panic("Invalid data")
-	} else {
-		errCh := make(chan error)
-		storeCh := make(chan uint)
-		storeNameCh := make(chan string)
-		go func(id int64) {
-			var store m.Store
-			if err := getDb().Where("owner_id = ?", id).First(&store).Error; err != nil {
-				errCh <- errors.New(err.Error())
-				storeCh <- 0
-				storeNameCh <- ""
-				return
-			}
+	errCh := make(chan error)
+	storeCh := make(chan uint)
+	storeNameCh := make(chan string)
 
-			errCh <- nil
-			storeCh <- store.ID
-			storeNameCh <- store.Name
-		}(Id)
-
-		if err := <-errCh; err != nil {
-			panic(err.Error())
+	go func(id int) {
+		var store m.Store
+		if err := getDb().Where("owner_id = ?", id).First(&store).Error; err != nil {
+			errCh <- err
+			storeCh <- 0
+			storeNameCh <- ""
+			return
 		}
 
-		item.Store_id = <-storeCh
-		storeName := <-storeNameCh
-		item.Slug = h.SlugGenerator(name + " by " + storeName)
+		errCh <- nil
+		storeCh <- store.ID
+		storeNameCh <- store.Name
+	}(user.Id)
+
+	if err := <-errCh; err != nil {
+		panic(err.Error())
 	}
+
+	item.Store_id = <-storeCh
+	storeName := <-storeNameCh
+	item.Slug = h.SlugGenerator(name + " by " + storeName)
+	
 
 	item.Name = name
 	item.Description = description
@@ -153,18 +152,18 @@ func CreateItem(c *gin.Context) {
 		img = image.Filename
 	}
 
-	errCh := make(chan error)
+	errCreate := make(chan error)
 
 	go func(item *m.Item) {
 		if err := getDb().Create(&item).Error; err != nil {
-			errCh <- errors.New(err.Error())
+			errCreate <- errors.New(err.Error())
 			return
 		}
 
-		errCh <- nil
+		errCreate <- nil
 	}(&item)
 
-	if err := <-errCh; err != nil {
+	if err := <- errCreate; err != nil {
 		panic(err.Error())
 	}
 

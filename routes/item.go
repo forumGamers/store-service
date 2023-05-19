@@ -13,6 +13,8 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri.GET("/",q.GetAllItem)
 
+	uri.POST("/",md.Authentication,cmd.CreateItem)
+
 	uri.GET("/store/:storeId",q.GetItemByStoreId)
 
 	uri.PATCH("/change-desc/:id",md.Authentication,cmd.UpdateItemDesc)
@@ -28,6 +30,4 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 	uri.PATCH("/change-discount/:id",md.Authentication,cmd.UpdateItemDiscount)
 
 	uri.GET("/:slug",q.GetItemBySlug)
-
-	uri.POST("/:storeId",md.Authentication,cmd.CreateItem)
 }

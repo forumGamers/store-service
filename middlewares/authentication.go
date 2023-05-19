@@ -21,7 +21,7 @@ func Authentication(c *gin.Context){
 	access_token := c.Request.Header.Get("access_token")
 
 	if access_token == "" {
-		panic("Invalid token")
+		panic("Forbidden")
 	}
 
 	secret,err := getSecretKey()

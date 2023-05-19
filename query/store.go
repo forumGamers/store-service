@@ -69,13 +69,13 @@ func GetAllStores(c *gin.Context){
 	
 		if minDate != "" && maxDate != "" {
 			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
 	
 			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -85,7 +85,7 @@ func GetAllStores(c *gin.Context){
 	
 		}else if minDate != "" {
 			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -95,7 +95,7 @@ func GetAllStores(c *gin.Context){
 	
 		}else if maxDate != "" {
 			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -106,7 +106,7 @@ func GetAllStores(c *gin.Context){
 	
 		if owner != "" {
 			if _,err := strconv.ParseInt(owner,10,64) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -117,7 +117,7 @@ func GetAllStores(c *gin.Context){
 	
 		if active != "" {
 			if _,err := strconv.ParseBool(active) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -128,13 +128,13 @@ func GetAllStores(c *gin.Context){
 	
 		if minExp != "" && maxExp != "" {
 			if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
 	
 			if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -144,7 +144,7 @@ func GetAllStores(c *gin.Context){
 	
 		}else if minExp != "" {
 			if _,err := strconv.ParseInt(minExp,10,64) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -154,7 +154,7 @@ func GetAllStores(c *gin.Context){
 	
 		}else if maxExp != "" {
 			if _,err := strconv.ParseInt(maxExp,10,64) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}
@@ -167,7 +167,7 @@ func GetAllStores(c *gin.Context){
 			lmt = 10
 		}else {
 			if lm,err := strconv.ParseInt(limit,10,64) ; err != nil {
-				errCh <- errors.New(err.Error())
+				errCh <- err
 				storeCh <- nil
 				return
 			}else {
@@ -235,10 +235,9 @@ func GetStoreById(c *gin.Context){
 			errCh <- errors.New("Data not found")
 			ch <- m.Store{}
 			return
-		}else {
-			errCh <- nil
-			ch <- store
 		}
+		errCh <- nil
+		ch <- store
 	}(id)
 
 	if err := <- errCh ; err != nil {
@@ -268,11 +267,10 @@ func GetStoreName(c *gin.Context){
 				errCh <- errors.New("Data not found")
 				storeName <- ""
 				return
-			}else {
-				errCh <- err
-				storeName <- ""
-				return
 			}
+			errCh <- err
+			storeName <- ""
+			return
 		}
 
 		errCh <- nil
@@ -286,4 +284,38 @@ func GetStoreName(c *gin.Context){
 	name := <- storeName
 
 	c.JSON(http.StatusOK,name)
+}
+
+func GetMyStore(c *gin.Context){
+	id := h.GetUser(c).Id
+
+	errCh := make(chan error)
+	dataCh := make(chan m.Store)
+
+	go func(id int){
+		var data m.Store
+
+		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("Items").First(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				dataCh <- m.Store{}
+				return
+			}
+
+			errCh <- err
+			dataCh <- m.Store{}
+			return
+		}
+
+		errCh <- nil
+		dataCh <- data
+	}(id)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	data := <- dataCh 
+
+	c.JSON(http.StatusOK,data)
 }
