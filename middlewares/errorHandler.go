@@ -53,6 +53,9 @@ func ErrorHandler(c *gin.Context) {
 		case "Unauthorize" :
 			s = http.StatusUnauthorized
 			break
+		case "Conflict":
+			s = http.StatusConflict
+			break
 		default :
 			fmt.Println(msg)
 			msg = "Internal Server Error"

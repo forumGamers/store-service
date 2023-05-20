@@ -79,6 +79,8 @@ func Routes(){
 
 	r.voucherRoutes(groupRoutes)
 
+	r.storeRatingsRoutes(groupRoutes)
+
 	port := os.Getenv("PORT")
 
 	if port == "" {
