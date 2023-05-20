@@ -289,23 +289,34 @@ func GetStoreName(c *gin.Context){
 func GetMyStore(c *gin.Context){
 	id := h.GetUser(c).Id
 
+	type Store struct {
+		m.Store
+		AvgRating   float64 `json:"avg_rating" gorm:"-"`
+		RatingCount int     `json:"rating_count" gorm:"-"`
+	}
+
 	errCh := make(chan error)
-	dataCh := make(chan m.Store)
+	dataCh := make(chan Store)
 
 	go func(id int){
-		var data m.Store
+		var data Store
 
-		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("Items",func(db *gorm.DB) *gorm.DB {
+		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("StoreStatus",func(db *gorm.DB) *gorm.DB {
+			return db.Select(
+				`COALESCE((SELECT AVG(rate) FROM store_ratings WHERE store_id = stores.id), 0) AS avg_rating,
+				COALESCE((SELECT COUNT(*) FROM store_ratings WHERE store_id = stores.id), 0) AS rating_count)`,
+				"NULL as store")
+		}).Preload("Items",func(db *gorm.DB) *gorm.DB {
 			return db.Select("items.*, NULL as store")
 		}).Preload("StoreStatus").First(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				errCh <- errors.New("Data not found")
-				dataCh <- m.Store{}
+				dataCh <- Store{}
 				return
 			}
 
 			errCh <- err
-			dataCh <- m.Store{}
+			dataCh <- Store{}
 			return
 		}
 
