@@ -24,7 +24,5 @@ func SetFK(g *gorm.DB){
 
 	g.Model(&m.ItemRating{}).AddForeignKey("item_id","items(id)","CASCADE","CASCADE")
 
-	g.Model(&m.Follower{}).AddForeignKey("store_id","stores(id)","CASCADE","CASCADE").AddUniqueIndex("idx_store_id","store_id")
-
 	g.Model(&m.Voucher{}).AddForeignKey("store_id","stores(id)","CASCADE","CASCADE")
 }
