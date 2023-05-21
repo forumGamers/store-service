@@ -2,7 +2,6 @@ package query
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 
@@ -323,13 +322,6 @@ func GetMyStore(c *gin.Context){
 		errCh <- nil
 		dataCh <- data
 	}(id)
-
-	d := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("StoreStatus",func(db *gorm.DB) *gorm.DB {
-		return db.Select(`AVG(sr.rate) AS avg_rating, COUNT(sr.*) AS rating_count`)
-	}).Preload("Items",func(db *gorm.DB) *gorm.DB {
-		return db.Select("items.*, NULL as store")
-	}).Preload("StoreStatus").QueryExpr()
-	fmt.Println(d)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
