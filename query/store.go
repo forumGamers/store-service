@@ -293,6 +293,7 @@ func GetMyStore(c *gin.Context){
 		m.Store
 		AvgRating   float64 `json:"avg_rating" gorm:"-"`
 		RatingCount int     `json:"rating_count" gorm:"-"`
+		Followers	int		`json:"followers" gorm:"-"`
 	}
 
 	errCh := make(chan error)
@@ -302,8 +303,10 @@ func GetMyStore(c *gin.Context){
 		var data Store
 
 		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).
+			Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count,
+			 	(SELECT COUNT(followers.*) FROM followers WHERE followers.store_id = stores.id) AS followers`).
 			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
-			Select("stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count").
+			Joins("LEFT JOIN followers on followers.store_id = stores.id").
 			Group("stores.id").
 			Preload("Items",func(db *gorm.DB) *gorm.DB {
 				return db.Select("items.*, NULL as store")
