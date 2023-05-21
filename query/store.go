@@ -2,6 +2,7 @@ package query
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 
@@ -301,19 +302,18 @@ func GetMyStore(c *gin.Context){
 	go func(id int){
 		var data Store
 
-		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("StoreStatus",func(db *gorm.DB) *gorm.DB {
-			return db.Select(
-				`COALESCE((SELECT AVG(rate) FROM store_ratings WHERE store_id = stores.id), 0) AS avg_rating,
-				COALESCE((SELECT COUNT(*) FROM store_ratings WHERE store_id = stores.id), 0) AS rating_count)`,
-				"NULL as store")
-		}).Preload("Items",func(db *gorm.DB) *gorm.DB {
-			return db.Select("items.*, NULL as store")
-		}).Preload("StoreStatus").First(&data).Error ; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				errCh <- errors.New("Data not found")
-				dataCh <- Store{}
-				return
-			}
+		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).
+			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
+			Select("stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count").
+			Group("stores.id").
+			Preload("Items",func(db *gorm.DB) *gorm.DB {
+				return db.Select("items.*, NULL as store")
+			}).Preload("StoreStatus").First(&data).Error ; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					errCh <- errors.New("Data not found")
+					dataCh <- Store{}
+					return
+				}
 
 			errCh <- err
 			dataCh <- Store{}
@@ -323,6 +323,13 @@ func GetMyStore(c *gin.Context){
 		errCh <- nil
 		dataCh <- data
 	}(id)
+
+	d := getDb().Model(m.Store{}).Where("owner_id = ?",id).Preload("StoreStatus",func(db *gorm.DB) *gorm.DB {
+		return db.Select(`AVG(sr.rate) AS avg_rating, COUNT(sr.*) AS rating_count`)
+	}).Preload("Items",func(db *gorm.DB) *gorm.DB {
+		return db.Select("items.*, NULL as store")
+	}).Preload("StoreStatus").QueryExpr()
+	fmt.Println(d)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
