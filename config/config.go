@@ -23,7 +23,6 @@ func Connection(){
 
 	database.AutoMigrate(
 		&m.StoreStatus{},
-		&m.Follower{},
 		&m.Cart{},
 		&m.Favorite{},
 		&m.Voucher{},
