@@ -40,8 +40,8 @@ func VoucherCheck(voucher m.Voucher,storeId uint) bool {
 	return false
 }
 
-func GetStoreByOwner(data *i.Store,id int) error {
-	if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).
+func GetStoreByCondition(data *i.Store,cond string,id int) error {
+	if err := getDb().Model(m.Store{}).Where(cond,id).
 			Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count`).
 			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
 			Group("stores.id").
@@ -50,20 +50,5 @@ func GetStoreByOwner(data *i.Store,id int) error {
 			}).Preload("StoreStatus").First(&data).Error ; err != nil {
 				return err
 			}
-
-	return nil
-}
-
-func GetStoreById(data *i.Store,id int) error {
-	if err := getDb().Model(m.Store{}).Where("stores.id = ?",id).
-			Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count`).
-			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
-			Group("stores.id").
-			Preload("Items",func(db *gorm.DB) *gorm.DB {
-				return db.Select("items.*, NULL as store")
-			}).Preload("StoreStatus").First(&data).Error ; err != nil {
-				return err
-			}
-
 	return nil
 }

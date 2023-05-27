@@ -239,7 +239,7 @@ func GetStoreById(c *gin.Context){
 	go func (id int){
 		var store i.Store
 
-		if err := s.GetStoreById(&store,id) ; err != nil {
+		if err := s.GetStoreByCondition(&store,"stores.id = ?",id) ; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				errCh <- errors.New("Data not found")
 				ch <- i.Store{}
@@ -310,7 +310,7 @@ func GetMyStore(c *gin.Context){
 	go func(id int){
 		var data i.Store
 
-		if err := s.GetStoreByOwner(&data,id) ; err != nil {
+		if err := s.GetStoreByCondition(&data,"owner_id = ?",id) ; err != nil {
 				if err == gorm.ErrRecordNotFound {
 					errCh <- errors.New("Data not found")
 					dataCh <- i.Store{}
