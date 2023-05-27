@@ -3,10 +3,16 @@ package services
 import (
 	"errors"
 
+	i "github.com/forumGamers/store-service/interfaces"
+	"github.com/forumGamers/store-service/loaders"
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
 	"github.com/jinzhu/gorm"
 )
+
+func getDb() *gorm.DB {
+	return loaders.GetDb()
+}
 
 func GetStore(id interface{},storeCh chan m.Store,errCh chan error) {
 	var data m.Store
@@ -32,4 +38,32 @@ func VoucherCheck(voucher m.Voucher,storeId uint) bool {
 		return true
 	}
 	return false
+}
+
+func GetStoreByOwner(data *i.Store,id int) error {
+	if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).
+			Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count`).
+			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
+			Group("stores.id").
+			Preload("Items",func(db *gorm.DB) *gorm.DB {
+				return db.Select("items.*, NULL as store")
+			}).Preload("StoreStatus").First(&data).Error ; err != nil {
+				return err
+			}
+
+	return nil
+}
+
+func GetStoreById(data *i.Store,id int) error {
+	if err := getDb().Model(m.Store{}).Where("stores.id = ?",id).
+			Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count`).
+			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
+			Group("stores.id").
+			Preload("Items",func(db *gorm.DB) *gorm.DB {
+				return db.Select("items.*, NULL as store")
+			}).Preload("StoreStatus").First(&data).Error ; err != nil {
+				return err
+			}
+
+	return nil
 }

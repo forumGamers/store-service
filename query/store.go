@@ -9,8 +9,10 @@ import (
 	"time"
 
 	h "github.com/forumGamers/store-service/helper"
+	i "github.com/forumGamers/store-service/interfaces"
 	l "github.com/forumGamers/store-service/loaders"
 	m "github.com/forumGamers/store-service/models"
+	s "github.com/forumGamers/store-service/services"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
@@ -226,19 +228,32 @@ func GetStoreById(c *gin.Context){
 
 	errCh := make(chan error)
 
-	ch := make(chan m.Store)
+	ch := make(chan i.Store)
 
-	go func (id string){
-		var store m.Store
+	Id,err := strconv.Atoi(id)
 
-		if err := getDb().Where("id = ?",id).Preload("Items").Find(&store).Error ; err != nil {
-			errCh <- errors.New("Data not found")
-			ch <- m.Store{}
-			return
-		}
-		errCh <- nil
-		ch <- store
-	}(id)
+	if err != nil {
+		panic("Invalid data")
+	}
+
+	go func (id int){
+		var store i.Store
+
+		if err := s.GetStoreById(&store,id) ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				ch <- i.Store{}
+				return
+			}
+
+		errCh <- err
+		ch <- i.Store{}
+		return
+	}
+
+	errCh <- nil
+	ch <- store
+	}(Id)
 
 	if err := <- errCh ; err != nil {
 		panic(err.Error())
@@ -289,33 +304,21 @@ func GetStoreName(c *gin.Context){
 func GetMyStore(c *gin.Context){
 	id := h.GetUser(c).Id
 
-	type Store struct {
-		m.Store
-		AvgRating   float64 `json:"avg_rating" gorm:"-"`
-		RatingCount int     `json:"rating_count" gorm:"-"`
-	}
-
 	errCh := make(chan error)
-	dataCh := make(chan Store)
+	dataCh := make(chan i.Store)
 
 	go func(id int){
-		var data Store
+		var data i.Store
 
-		if err := getDb().Model(m.Store{}).Where("owner_id = ?",id).
-			Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count`).
-			Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
-			Group("stores.id").
-			Preload("Items",func(db *gorm.DB) *gorm.DB {
-				return db.Select("items.*, NULL as store")
-			}).Preload("StoreStatus").First(&data).Error ; err != nil {
+		if err := s.GetStoreByOwner(&data,id) ; err != nil {
 				if err == gorm.ErrRecordNotFound {
 					errCh <- errors.New("Data not found")
-					dataCh <- Store{}
+					dataCh <- i.Store{}
 					return
 				}
 
 			errCh <- err
-			dataCh <- Store{}
+			dataCh <- i.Store{}
 			return
 		}
 
@@ -328,6 +331,41 @@ func GetMyStore(c *gin.Context){
 	}
 
 	data := <- dataCh 
+
+	c.JSON(http.StatusOK,data)
+}
+
+func GetAllStoreId(c *gin.Context){
+	type storeId struct {
+		ID int
+	}
+
+	dataCh := make(chan []storeId)
+	errCh := make(chan error)
+
+	go func(){
+		var data []storeId
+		if err := getDb().Raw(`select id from stores s where deleted_at is null`).Find(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				dataCh <- nil
+				return
+			}
+
+			errCh <- err
+			dataCh <- nil
+			return
+		}
+
+		errCh <- nil
+		dataCh <- data
+	}()
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	data := <- dataCh
 
 	c.JSON(http.StatusOK,data)
 }
