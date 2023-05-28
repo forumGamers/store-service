@@ -17,6 +17,8 @@ func (r routes) itemRoutes(rg *gin.RouterGroup){
 
 	uri.GET("/store/:storeId",q.GetItemByStoreId)
 
+	uri.GET("/list-slug",q.GetListSlug)
+
 	uri.GET("/list-slug/:storeId",q.GetItemSlugByStoreId)
 
 	uri.PATCH("/change-desc/:id",md.Authentication,cmd.UpdateItemDesc)

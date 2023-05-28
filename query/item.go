@@ -579,3 +579,44 @@ func GetItemSlugByStoreId(c *gin.Context){
 	
 	c.JSON(http.StatusOK,data)
 }
+
+func GetListSlug(c *gin.Context){
+	type list struct {
+		ID int
+		Slug string
+	}
+
+	dataCh := make(chan []list)
+	errCh := make(chan error)
+
+	go func(){
+		var data []list
+
+		if err := getDb().Raw(
+			`SELECT s.id , i.slug
+			FROM stores s
+			INNER JOIN items i ON i.store_id = s.id;
+		`).Find(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				dataCh <- nil
+				return
+			}
+
+			errCh <- err
+			dataCh <- nil
+			return
+		}
+
+		errCh <- nil
+		dataCh <- data
+	}()
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	data := <- dataCh 
+
+	c.JSON(http.StatusOK,data)
+}
