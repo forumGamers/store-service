@@ -535,3 +535,47 @@ func GetItemByStoreId(c *gin.Context){
 
 	c.JSON(http.StatusOK,items)
 }
+
+func GetItemSlugByStoreId(c *gin.Context){
+	storeId := c.Param("storeId")
+
+	id,err := strconv.Atoi(storeId)
+
+	type itemSlug struct {
+		Slug	string
+	}
+
+	if err != nil {
+		panic("Invalid data")
+	}
+
+	dataCh := make(chan []itemSlug)
+	errCh := make(chan error)
+
+	go func(id int){
+		var data []itemSlug
+
+		if err := getDb().Raw("select slug from items i where store_id = ?",id).Find(&data).Error ; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				errCh <- errors.New("Data not found")
+				dataCh <- nil
+				return
+			}
+
+			errCh <- err
+			dataCh <- nil
+			return
+		}
+
+		errCh <- nil
+		dataCh <- data
+	}(id)
+
+	if err := <- errCh ; err != nil {
+		panic(err.Error())
+	}
+
+	data := <- dataCh
+	
+	c.JSON(http.StatusOK,data)
+}
