@@ -2,6 +2,7 @@ package query
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 
@@ -32,6 +33,7 @@ func GetAllStores(c *gin.Context){
 	c.Query("maxExp"),
 	c.Query("page"),
 	c.Query("limit")
+	fmt.Println(name)
 
 	errCh := make(chan error)
 	storeCh := make(chan []i.Store)
@@ -61,7 +63,7 @@ func GetAllStores(c *gin.Context){
 		var lmt int
 
 		if name != "" {
-			r := regexp.MustCompile(`\W`)
+			r := regexp.MustCompile(`/[^a-zA-Z0-9.,_:\-\s@]/g`)
 			res = r.ReplaceAllString(name,"")
 			query = h.QueryBuild(query,"name ILIKE ?")
 			args = append(args, "%"+res+"%")
