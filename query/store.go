@@ -33,10 +33,8 @@ func GetAllStores(c *gin.Context){
 	c.Query("page"),
 	c.Query("limit")
 
-	var store []m.Store
-
 	errCh := make(chan error)
-	storeCh := make(chan []m.Store)
+	storeCh := make(chan []i.Store)
 
 	go func (
 		name string,
@@ -50,7 +48,7 @@ func GetAllStores(c *gin.Context){
 		limit string,
 		){
 
-		var data []m.Store
+		var data []i.Store
 
 		var res string
 
@@ -189,7 +187,16 @@ func GetAllStores(c *gin.Context){
 			}
 		}
 
-		getDb().Model(m.Store{}).Where(query,args...).Preload("Items").Preload("StoreStatus").Offset((pg - 1) * lmt).Limit(lmt).Find(&data)
+		getDb().Model(m.Store{}).
+		Where(query,args...).
+		Select(`stores.*, AVG(store_ratings.rate) AS avg_rating, COUNT(store_ratings.*) AS rating_count`).
+		Joins("LEFT JOIN store_ratings ON store_ratings.store_id = stores.id").
+		Group("stores.id").
+		Preload("Items").
+		Preload("StoreStatus").
+		Offset((pg - 1) * lmt).
+		Limit(lmt).
+		Find(&data)
 
 		if len(data) < 1 {
 			errCh <- errors.New("Data not found")
@@ -217,7 +224,7 @@ func GetAllStores(c *gin.Context){
 		if err != nil {
 			panic(err.Error())
 		}
-	case store = <- storeCh :
+	case store := <- storeCh :
 		c.JSON(http.StatusOK,store)
 		return
 	}
