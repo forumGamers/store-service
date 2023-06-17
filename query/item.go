@@ -77,7 +77,7 @@ func GetAllItem(c *gin.Context){
 		if name != "" {
 			r := regexp.MustCompile(`\W`)
 			res = r.ReplaceAllString(name,"")
-			query = h.QueryBuild(query,"name ILIKE ?")
+			h.QueryBuild(&query,"name ILIKE ?")
 			args = append(args, "%"+res+"%")
 		}
 
@@ -94,7 +94,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+			h.QueryBuild(&query,"created_at BETWEEN ? and ?")
 			args = append(args,minDate,maxDate)
 		}else if minDate != "" {
 			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
@@ -103,7 +103,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at >= ?")
+			h.QueryBuild(&query,"created_at >= ?")
 			args = append(args,minDate)
 		}else if maxDate != "" {
 			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
@@ -112,7 +112,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at <= ?")
+			h.QueryBuild(&query,"created_at <= ?")
 			args = append(args, maxDate)
 		}
 
@@ -123,14 +123,14 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"store_id = ?")
+			h.QueryBuild(&query,"store_id = ?")
 			args = append(args, store)
 		}
 
 		if status != "" {
 			r := regexp.MustCompile(`\W`)
 			x := r.ReplaceAllString(status,"")
-			query = h.QueryBuild(query,"status = ?")
+			h.QueryBuild(&query,"status = ?")
 			args = append(args, x)
 		}
 
@@ -147,7 +147,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"(price BETWEEN ? and ?)")
+			h.QueryBuild(&query,"(price BETWEEN ? and ?)")
 			args = append(args, minPrice,maxPrice)
 		}else if minPrice != "" {
 			if _,err := strconv.ParseInt(minPrice,10,64) ; err != nil {
@@ -156,7 +156,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"price >= ?")
+			h.QueryBuild(&query,"price >= ?")
 			args = append(args, minPrice)
 		}else if maxPrice != "" {
 			if _,err := strconv.ParseInt(maxPrice,10,64) ; err != nil {
@@ -165,7 +165,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 
-			query = h.QueryBuild(query,"price <= ?")
+			h.QueryBuild(&query,"price <= ?")
 			args = append(args, maxPrice)
 		}
 
@@ -182,7 +182,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"(discount BETWEEN ? and ?)")
+			h.QueryBuild(&query,"(discount BETWEEN ? and ?)")
 			args = append(args, minDiscount,maxDiscount)
 		}else if minDiscount != "" {
 			if _,err := strconv.ParseInt(minDiscount,10,64) ; err != nil {
@@ -191,7 +191,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"discount >= ?")
+			h.QueryBuild(&query,"discount >= ?")
 			args = append(args, minDiscount)
 		}else if maxDiscount != "" {
 			if _,err := strconv.ParseInt(maxDiscount,10,64) ; err != nil {
@@ -200,7 +200,7 @@ func GetAllItem(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"discount <= ?")
+			h.QueryBuild(&query,"discount <= ?")
 			args = append(args, maxDiscount)
 		}
 
@@ -357,7 +357,7 @@ func GetItemByStoreId(c *gin.Context){
 		if name != "" {
 			r := regexp.MustCompile(`\W`)
 			res = r.ReplaceAllString(name,"")
-			query = h.QueryBuild(query,"name ILIKE ?")
+			h.QueryBuild(&query,"name ILIKE ?")
 			args = append(args, "%"+res+"%")
 		}
 
@@ -374,7 +374,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+			h.QueryBuild(&query,"created_at BETWEEN ? and ?")
 			args = append(args,minDate,maxDate)
 		}else if minDate != "" {
 			if _,err := time.Parse("30-12-2022",minDate) ; err != nil {
@@ -383,7 +383,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at >= ?")
+			h.QueryBuild(&query,"created_at >= ?")
 			args = append(args,minDate)
 		}else if maxDate != "" {
 			if _,err := time.Parse("30-12-2022",maxDate) ; err != nil {
@@ -392,14 +392,14 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at <= ?")
+			h.QueryBuild(&query,"created_at <= ?")
 			args = append(args, maxDate)
 		}
 
 		if status != "" {
 			r := regexp.MustCompile(`\W`)
 			x := r.ReplaceAllString(status,"")
-			query = h.QueryBuild(query,"status = ?")
+			h.QueryBuild(&query,"status = ?")
 			args = append(args, x)
 		}
 
@@ -416,7 +416,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"(price BETWEEN ? and ?)")
+			h.QueryBuild(&query,"(price BETWEEN ? and ?)")
 			args = append(args, minPrice,maxPrice)
 		}else if minPrice != "" {
 			if _,err := strconv.ParseInt(minPrice,10,64) ; err != nil {
@@ -425,7 +425,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"price >= ?")
+			h.QueryBuild(&query,"price >= ?")
 			args = append(args, minPrice)
 		}else if maxPrice != "" {
 			if _,err := strconv.ParseInt(maxPrice,10,64) ; err != nil {
@@ -434,7 +434,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 
-			query = h.QueryBuild(query,"price <= ?")
+			h.QueryBuild(&query,"price <= ?")
 			args = append(args, maxPrice)
 		}
 
@@ -451,7 +451,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"(discount BETWEEN ? and ?)")
+			h.QueryBuild(&query,"(discount BETWEEN ? and ?)")
 			args = append(args, minDiscount,maxDiscount)
 		}else if minDiscount != "" {
 			if _,err := strconv.ParseInt(minDiscount,10,64) ; err != nil {
@@ -460,7 +460,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"discount >= ?")
+			h.QueryBuild(&query,"discount >= ?")
 			args = append(args, minDiscount)
 		}else if maxDiscount != "" {
 			if _,err := strconv.ParseInt(maxDiscount,10,64) ; err != nil {
@@ -469,7 +469,7 @@ func GetItemByStoreId(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"discount <= ?")
+			h.QueryBuild(&query,"discount <= ?")
 			args = append(args, maxDiscount)
 		}
 

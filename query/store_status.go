@@ -34,7 +34,7 @@ func GetAllStoreStatus(c *gin.Context){
 		if name != "" {
 			r := regexp.MustCompile(`\W`)
 			result := r.ReplaceAllString(name,"")
-			query = h.QueryBuild(query,"name ILIKE ?")
+			h.QueryBuild(&query,"name ILIKE ?")
 			args = append(args, "%"+result+"%")
 		}
 	

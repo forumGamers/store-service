@@ -63,7 +63,7 @@ func GetAllTransaction(c *gin.Context){
 					maxVal = int(max)
 				}
 
-				query = h.QueryBuild(query,"value BETWEEN ? and ?")
+				h.QueryBuild(&query,"value BETWEEN ? and ?")
 				args = append(args, minVal,maxVal)
 			}else if minValue != "" {
 				if min ,err := strconv.ParseInt(minValue,10,64) ; err != nil {
@@ -74,7 +74,7 @@ func GetAllTransaction(c *gin.Context){
 					minVal = int(min)
 				}
 
-				query = h.QueryBuild(query,"value >= ?")
+				h.QueryBuild(&query,"value >= ?")
 				args = append(args, minVal)
 			}else if maxValue != "" {
 				if max,err := strconv.ParseInt(maxValue,10,64) ; err != nil {
@@ -85,14 +85,14 @@ func GetAllTransaction(c *gin.Context){
 					maxVal = int(max)
 				}
 
-				query = h.QueryBuild(query,"value <= ?")
+				h.QueryBuild(&query,"value <= ?")
 				args = append(args, maxVal)
 			}
 
 			if status != "" {
 				r := regexp.MustCompile(`[^\w\s.] `)
 				res := r.ReplaceAllString(status,"")
-				query = h.QueryBuild(query,"status = ?")
+				h.QueryBuild(&query,"status = ?")
 				args = append(args,res)
 			}
 
@@ -105,7 +105,7 @@ func GetAllTransaction(c *gin.Context){
 					item = int(i)
 				}
 
-				query = h.QueryBuild(query,"item_id = ?")
+				h.QueryBuild(&query,"item_id = ?")
 				args = append(args, item)
 			}
 
@@ -118,7 +118,7 @@ func GetAllTransaction(c *gin.Context){
 					store = int(s)
 				}
 
-				query = h.QueryBuild(query,"store_id = ?")
+				h.QueryBuild(&query,"store_id = ?")
 				args = append(args, store)
 			}
 

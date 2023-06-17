@@ -65,7 +65,7 @@ func GetAllStores(c *gin.Context){
 		if name != "" {
 			r := regexp.MustCompile(`/[^a-zA-Z0-9.,_:\-\s@]/g`)
 			res = r.ReplaceAllString(name,"")
-			query = h.QueryBuild(query,"name ILIKE ?")
+			h.QueryBuild(&query,"name ILIKE ?")
 			args = append(args, "%"+res+"%")
 		}
 	
@@ -82,7 +82,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at BETWEEN ? and ?")
+			h.QueryBuild(&query,"created_at BETWEEN ? and ?")
 			args = append(args,minDate,maxDate)
 	
 		}else if minDate != "" {
@@ -92,7 +92,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at >= ?")
+			h.QueryBuild(&query,"created_at >= ?")
 			args = append(args,minDate)
 	
 		}else if maxDate != "" {
@@ -102,7 +102,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"created_at <= ?")
+			h.QueryBuild(&query,"created_at <= ?")
 			args = append(args, maxDate)
 		}
 	
@@ -113,7 +113,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"owner_id = ?")
+			h.QueryBuild(&query,"owner_id = ?")
 			args = append(args, owner)
 		}
 	
@@ -124,7 +124,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"active = ?")
+			h.QueryBuild(&query,"active = ?")
 			args = append(args, active)
 		}
 	
@@ -141,7 +141,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"(exp BETWEEN ? and ?)")
+			h.QueryBuild(&query,"(exp BETWEEN ? and ?)")
 			args = append(args, minExp,maxExp)
 	
 		}else if minExp != "" {
@@ -151,7 +151,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"exp >= ?")
+			h.QueryBuild(&query,"exp >= ?")
 			args = append(args, minExp)
 	
 		}else if maxExp != "" {
@@ -161,7 +161,7 @@ func GetAllStores(c *gin.Context){
 				return
 			}
 	
-			query = h.QueryBuild(query,"exp <= ?")
+			h.QueryBuild(&query,"exp <= ?")
 			args = append(args, maxExp)
 		}
 

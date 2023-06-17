@@ -1,11 +1,9 @@
 package helper
 
-func QueryBuild(init string, add string) string {
-	query := ""
-	if init == "" {
-		query = add
+func QueryBuild(query *string, add string) {
+	if *query == "" {
+		*query = add
 	} else {
-		query = init + " and " + add
+		*query = *query + " and " + add
 	}
-	return query
 }

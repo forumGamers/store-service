@@ -29,7 +29,7 @@ func GetAllVoucher(c *gin.Context){
 		if name != "" {
 			r := regexp.MustCompile(`\W`)
 			res := r.ReplaceAllString(name,"")
-			query = h.QueryBuild(query,"name ILIKE ?")
+			h.QueryBuild(&query,"name ILIKE ?")
 			args = append(args, "%"+res+"%")
 		}
 
@@ -62,7 +62,7 @@ func GetAllVoucher(c *gin.Context){
 		}else {
 			lmt = 10
 		}
-		query = h.QueryBuild(query,"store_id = ?")
+		h.QueryBuild(&query,"store_id = ?")
 		args = append(args, store)
 		if err := getDb().Model(m.Voucher{}).Where(query,args...).Offset((pg - 1) * lmt).Limit(lmt).Find(&data).Error ; err != nil {
 			if err == gorm.ErrRecordNotFound {
