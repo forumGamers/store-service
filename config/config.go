@@ -2,9 +2,11 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	h "github.com/forumGamers/store-service/helper"
 	m "github.com/forumGamers/store-service/models"
+	"github.com/joho/godotenv"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
@@ -13,7 +15,15 @@ import (
 var Db *gorm.DB
 
 func Connection(){
-	database,err := gorm.Open("postgres","user=postgres password=qwertyui host=127.0.0.1 port=5432 dbname=store-service sslmode=disable")
+	godotenv.Load()
+
+	DATABASE_URL := os.Getenv("DATABASE_URL")
+
+	if DATABASE_URL == "" {
+		DATABASE_URL = "user=postgres password=qwertyui host=127.0.0.1 port=5432 dbname=store-service sslmode=disable"
+	}
+
+	database,err := gorm.Open("postgres",DATABASE_URL)
 
 	if err != nil {
 		panic(err.Error())
@@ -30,7 +40,6 @@ func Connection(){
 		&m.ItemRating{},
 		&m.Store{},
 		&m.Item{},
-		&m.Transaction{},
 		&m.Log{},
 	)
 

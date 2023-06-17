@@ -16,7 +16,6 @@ type Store struct {
 	Active				bool			`json:"active" gorm:"default:true"`
 	Items 				[]Item			`gorm:";constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:store_id"`
 	Ratings				[]StoreRating	`gorm:";constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:store_id"`
-	Transactions 		[]Transaction	`gorm:";foreignKey:store_id"`
 	Vouchers			[]Voucher		`gorm:";foreignKey:store_id"`
 	StoreStatus			StoreStatus		`gorm:";foreignKey:status_id;contraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }

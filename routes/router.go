@@ -71,8 +71,6 @@ func Routes(){
 
 	r.favoriteRoutes(groupRoutes)
 
-	r.transactionRoutes(groupRoutes)
-
 	r.cartRoutes(groupRoutes)
 
 	r.voucherRoutes(groupRoutes)
