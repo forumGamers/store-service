@@ -102,6 +102,10 @@ func CreateItem(c *gin.Context) {
 
 	if image, err := c.FormFile("image"); err == nil {
 
+		if err := h.IsImage(image) ; err != nil {
+			panic(err.Error())
+		}
+
 		if err := c.SaveUploadedFile(image, "uploads/"+image.Filename); err != nil {
 			panic(err.Error())
 		}
@@ -221,12 +225,16 @@ func UpdateItemDesc(c *gin.Context){
 func UpdateItemImage(c *gin.Context){
 	var item m.Item
 
-	image , err := c.FormFile("image")
-
 	id := c.Param("id")
+
+	image , err := c.FormFile("image")
 
 	if err != nil {
 		panic("Invalid data")
+	}
+
+	if err := h.IsImage(image) ; err != nil {
+		panic(err.Error())
 	}
 
 	itemCh := make(chan m.Item)

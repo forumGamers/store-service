@@ -56,6 +56,12 @@ func ErrorHandler(c *gin.Context) {
 		case "Conflict":
 			s = http.StatusConflict
 			break
+		case "file cannot be larger than 10 mb":
+			s = http.StatusBadRequest
+			break
+		case "file type is not supported":
+			s = http.StatusBadRequest
+			break
 		default :
 			fmt.Println(msg)
 			msg = "Internal Server Error"

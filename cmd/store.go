@@ -59,6 +59,10 @@ func CreateStore(c *gin.Context){
 
 	if image,err := c.FormFile("image") ; err == nil {
 
+		if err := h.IsImage(image) ; err != nil {
+			panic(err.Error())
+		}
+
 		if err := c.SaveUploadedFile(image,"uploads/"+image.Filename) ; err != nil {
 			panic(err.Error())
 		}
@@ -280,6 +284,10 @@ func UpdateStoreImage(c *gin.Context){
 		panic("Invalid data")
 	}
 
+	if err := h.IsImage(image) ; err != nil {
+		panic(err.Error())
+	}
+
 	id := h.GetUser(c).Id
 
 	storeCh := make(chan m.Store)
@@ -377,6 +385,10 @@ func UpdateStoreBg(c *gin.Context){
 
 	if err != nil {
 		panic("Invalid data")
+	}
+
+	if err := h.IsImage(image) ; err != nil {
+		panic(err.Error())
 	}
 
 	storeCh := make(chan m.Store)

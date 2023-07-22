@@ -2,7 +2,6 @@ package query
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 
@@ -33,20 +32,19 @@ func GetAllStores(c *gin.Context){
 	c.Query("maxExp"),
 	c.Query("page"),
 	c.Query("limit")
-	fmt.Println(name)
 
 	errCh := make(chan error)
 	storeCh := make(chan []i.Store)
 
 	go func (
-		name string,
-		minDate string,
-		maxDate string,
-		owner string,
-		active string,
-		minExp string,
-		maxExp string,
-		page string,
+		name,
+		minDate,
+		maxDate,
+		owner,
+		active,
+		minExp,
+		maxExp,
+		page,
 		limit string,
 		){
 
